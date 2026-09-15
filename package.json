@@ -4,6 +4,7 @@
   "private": true,
   "description": "Notch-style island showing AI subscription plan usage limits",
   "author": "Schoolees",
+  "license": "MIT",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
