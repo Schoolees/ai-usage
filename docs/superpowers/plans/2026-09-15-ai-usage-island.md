@@ -43,7 +43,7 @@
 **Implementation rules**
 - Timestamps are epoch **milliseconds** (`number`) everywhere, rounded to the minute for `resetsAt`, so snapshots serialize unchanged over IPC and into `state.json`. The spec's `Date` fields are represented this way.
 - Only these files may import `electron`: `src/main/index.ts`, `app.ts`, `island-window.ts`, `settings-window.ts`, `tray.ts`, `notifier.ts`, `displays.ts`, `renderer-url.ts`, `log.ts`, `foreground-window.ts`, and `src/preload/index.ts`. Everything else stays pure and testable.
-- App id: `com.rpbaguio.ai-usage`. Product name: `AI Usage`.
+- App id: `com.schoolees.ai-usage`. Product name: `AI Usage`.
 - `package.json` has **no** `"type": "module"`, so main and preload build as CommonJS, which sandboxed preload scripts require.
 
 **Where commands run**
@@ -208,7 +208,7 @@ git commit -m "spike: confirm Claude usage endpoint and capture fixture"
 - Create: `scripts/sync-to-windows.sh`
 
 **Interfaces:**
-- Produces: `APP_ID = 'com.rpbaguio.ai-usage'`, `PRODUCT_NAME = 'AI Usage'`, `MINUTE`, `HOUR`, `DAY`, `roundToMinute(ms: number): number`. Also the `npm test`, `npm run typecheck`, `npm run build` and `npm run dev` scripts.
+- Produces: `APP_ID = 'com.schoolees.ai-usage'`, `PRODUCT_NAME = 'AI Usage'`, `MINUTE`, `HOUR`, `DAY`, `roundToMinute(ms: number): number`. Also the `npm test`, `npm run typecheck`, `npm run build` and `npm run dev` scripts.
 
 - [ ] **Step 1: Create `package.json`**
 
@@ -218,7 +218,7 @@ git commit -m "spike: confirm Claude usage endpoint and capture fixture"
   "version": "0.1.0",
   "private": true,
   "description": "Notch-style island showing AI subscription plan usage limits",
-  "author": "rpbaguio",
+  "author": "Schoolees",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -382,7 +382,7 @@ export function roundToMinute(ms: number): number {
 
 `src/shared/app-id.ts`:
 ```ts
-export const APP_ID = 'com.rpbaguio.ai-usage';
+export const APP_ID = 'com.schoolees.ai-usage';
 export const PRODUCT_NAME = 'AI Usage';
 ```
 
@@ -525,7 +525,7 @@ export interface Source {
   kind: SourceKind;
   /** "Windows", "Local" (non-Windows dev) or "WSL · Ubuntu" */
   label: string;
-  /** C:\Users\Raymond  or  \\wsl.localhost\Ubuntu\home\rpbaguio */
+  /** C:\Users\you  or  \\wsl.localhost\Ubuntu\home\you */
   home: string;
 }
 
@@ -1889,9 +1889,9 @@ const utf16 = (text: string) => Buffer.from(`\uFEFF${text}`, 'utf16le');
 function deps(overrides: Partial<DetectDeps>): DetectDeps {
   return {
     platform: 'win32',
-    homedir: () => 'C:\\Users\\Raymond',
+    homedir: () => 'C:\\Users\\you',
     listRunningDistros: async () => utf16('Ubuntu\r\nDebian\r\n'),
-    readdir: async (path) => (path.includes('Ubuntu') ? ['rpbaguio'] : ['root2', 'dev']),
+    readdir: async (path) => (path.includes('Ubuntu') ? ['you'] : ['root2', 'dev']),
     timeoutMs: 50,
     ...overrides,
   };
@@ -1910,8 +1910,8 @@ describe('parseWslList', () => {
 describe('listCandidateHomes', () => {
   it('lists the Windows home and every user home in running distros', async () => {
     expect(await listCandidateHomes(deps({}))).toEqual([
-      { kind: 'windows', label: 'Windows', home: 'C:\\Users\\Raymond' },
-      { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\rpbaguio' },
+      { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you' },
+      { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\you' },
       { kind: 'wsl', label: 'WSL · Debian', home: '\\\\wsl.localhost\\Debian\\home\\root2' },
       { kind: 'wsl', label: 'WSL · Debian', home: '\\\\wsl.localhost\\Debian\\home\\dev' },
     ]);
@@ -1934,13 +1934,13 @@ describe('listCandidateHomes', () => {
     const result = await listCandidateHomes(
       deps({ readdir: (path) => (path.includes('Ubuntu') ? new Promise(() => {}) : Promise.resolve(['dev'])) }),
     );
-    expect(result.map((s) => s.home)).toEqual(['C:\\Users\\Raymond', '\\\\wsl.localhost\\Debian\\home\\dev']);
+    expect(result.map((s) => s.home)).toEqual(['C:\\Users\\you', '\\\\wsl.localhost\\Debian\\home\\dev']);
   });
 });
 
 describe('pickSource', () => {
-  const windows: DetectedSource = { kind: 'windows', label: 'Windows', home: 'C:\\Users\\Raymond', lastModifiedMs: 100 };
-  const wsl: DetectedSource = { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\rpbaguio', lastModifiedMs: 200 };
+  const windows: DetectedSource = { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you', lastModifiedMs: 100 };
+  const wsl: DetectedSource = { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\you', lastModifiedMs: 200 };
 
   it('prefers the configured home when it is still detected', () => {
     expect(pickSource([windows, wsl], windows.home)).toBe(windows);
@@ -2155,7 +2155,7 @@ afterEach(() => {
 
 const snapshot: Snapshot = {
   providerId: 'claude',
-  source: { kind: 'windows', label: 'Windows', home: 'C:\\Users\\Raymond' },
+  source: { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you' },
   plan: 'Max (5x)',
   status: 'ok',
   dataAsOf: 1,
@@ -4172,7 +4172,7 @@ export const claude: ProviderView = {
 
 export const codex: ProviderView = {
   id: 'codex', name: 'ChatGPT (Codex)', shortName: 'Codex', plan: 'Pro Lite',
-  source: { kind: 'windows', label: 'Windows', home: 'C:\\Users\\Raymond' },
+  source: { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you' },
   status: 'ok', dataAsOf: now - 3 * 3_600_000, fromLogs: true, maxPercent: 97, level: 'critical',
   limits: [{ id: 'codex-10080m', label: 'Weekly limit', usedPercent: 97, resetsAt: now + 2 * 86_400_000, level: 'critical' }],
 };
@@ -5628,7 +5628,7 @@ git commit -m "feat: hide island over fullscreen apps and register login item"
 - [ ] **Step 1: Create `electron-builder.yml`**
 
 ```yaml
-appId: com.rpbaguio.ai-usage
+appId: com.schoolees.ai-usage
 productName: AI Usage
 directories:
   buildResources: build

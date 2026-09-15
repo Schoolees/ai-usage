@@ -17,7 +17,7 @@ afterEach(() => {
 
 const snapshot: Snapshot = {
   providerId: 'claude',
-  source: { kind: 'windows', label: 'Windows', home: 'C:\\Users\\Raymond' },
+  source: { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you' },
   plan: 'Max (5x)',
   status: 'ok',
   dataAsOf: 1,

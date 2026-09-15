@@ -15,9 +15,9 @@ const utf16 = (text: string) => Buffer.from(`\uFEFF${text}`, 'utf16le');
 function deps(overrides: Partial<DetectDeps>): DetectDeps {
   return {
     platform: 'win32',
-    homedir: () => 'C:\\Users\\Raymond',
+    homedir: () => 'C:\\Users\\you',
     listRunningDistros: async () => utf16('Ubuntu\r\nDebian\r\n'),
-    readdir: async (path) => (path.includes('Ubuntu') ? ['rpbaguio'] : ['root2', 'dev']),
+    readdir: async (path) => (path.includes('Ubuntu') ? ['you'] : ['root2', 'dev']),
     timeoutMs: 50,
     ...overrides,
   };
@@ -42,8 +42,8 @@ describe('parseWslList', () => {
 describe('listCandidateHomes', () => {
   it('lists the Windows home and every user home in running distros', async () => {
     expect(await listCandidateHomes(deps({}))).toEqual([
-      { kind: 'windows', label: 'Windows', home: 'C:\\Users\\Raymond' },
-      { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\rpbaguio' },
+      { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you' },
+      { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\you' },
       { kind: 'wsl', label: 'WSL · Debian', home: '\\\\wsl.localhost\\Debian\\home\\root2' },
       { kind: 'wsl', label: 'WSL · Debian', home: '\\\\wsl.localhost\\Debian\\home\\dev' },
     ]);
@@ -66,7 +66,7 @@ describe('listCandidateHomes', () => {
     const result = await listCandidateHomes(
       deps({ readdir: (path) => (path.includes('Ubuntu') ? new Promise(() => {}) : Promise.resolve(['dev'])) }),
     );
-    expect(result.map((s) => s.home)).toEqual(['C:\\Users\\Raymond', '\\\\wsl.localhost\\Debian\\home\\dev']);
+    expect(result.map((s) => s.home)).toEqual(['C:\\Users\\you', '\\\\wsl.localhost\\Debian\\home\\dev']);
   });
 });
 
@@ -77,7 +77,7 @@ describe('distroFromHome', () => {
   });
 
   it('returns null for a non-WSL home', () => {
-    expect(distroFromHome('C:\\Users\\Raymond')).toBeNull();
+    expect(distroFromHome('C:\\Users\\you')).toBeNull();
     expect(distroFromHome('/home/me')).toBeNull();
   });
 });
@@ -113,8 +113,8 @@ describe('createRunningDistroCache', () => {
 });
 
 describe('pickSource', () => {
-  const windows: DetectedSource = { kind: 'windows', label: 'Windows', home: 'C:\\Users\\Raymond', lastModifiedMs: 100 };
-  const wsl: DetectedSource = { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\rpbaguio', lastModifiedMs: 200 };
+  const windows: DetectedSource = { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you', lastModifiedMs: 100 };
+  const wsl: DetectedSource = { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\you', lastModifiedMs: 200 };
 
   it('prefers the configured home when it is still detected', () => {
     expect(pickSource([windows, wsl], windows.home)).toBe(windows);

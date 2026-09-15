@@ -7,7 +7,7 @@ export interface Source {
   kind: SourceKind;
   /** "Windows", "Local" (non-Windows dev) or "WSL · Ubuntu" */
   label: string;
-  /** C:\Users\Raymond  or  \\wsl.localhost\Ubuntu\home\rpbaguio */
+  /** C:\Users\you  or  \\wsl.localhost\Ubuntu\home\you */
   home: string;
 }
 

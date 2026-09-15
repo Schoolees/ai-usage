@@ -14,7 +14,7 @@ export const claude: ProviderView = {
 
 export const codex: ProviderView = {
   id: 'codex', name: 'ChatGPT (Codex)', shortName: 'Codex', plan: 'Pro Lite',
-  source: { kind: 'windows', label: 'Windows', home: 'C:\\Users\\Raymond' },
+  source: { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you' },
   status: 'ok', dataAsOf: now - 3 * 3_600_000, fromLogs: true, maxPercent: 97, headlinePercent: 97, level: 'critical', stale: false,
   limits: [{ id: 'codex-10080m', label: 'Weekly limit', usedPercent: 97, resetsAt: now + 2 * 86_400_000, level: 'critical' }],
 };

@@ -6,7 +6,7 @@ import { Select, type SelectOption } from './Select';
 const sources: SelectOption[] = [
   { value: '', label: 'Automatic (most recently used)' },
   { value: 'wsl', label: 'WSL · Ubuntu-24.04', detail: '\\\\wsl.localhost\\Ubuntu-24.04\\home\\me' },
-  { value: 'win', label: 'Windows', detail: 'C:\\Users\\Raymond' },
+  { value: 'win', label: 'Windows', detail: 'C:\\Users\\you' },
 ];
 
 const many: SelectOption[] = ['Light', 'Dark', 'GitHub Light', 'One Light', 'Solarized Light', 'Min Light', 'Vitesse Light'].map((label) => ({
