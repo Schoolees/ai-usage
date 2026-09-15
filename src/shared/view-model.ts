@@ -1,0 +1,85 @@
+import type { Limit, ProviderStatus, Snapshot, Source } from './types';
+
+export type Level = 'normal' | 'warn' | 'critical';
+
+export interface LimitView extends Limit {
+  level: Level;
+}
+
+export interface ProviderView {
+  id: string;
+  name: string;
+  shortName: string;
+  plan?: string;
+  source: Source | null;
+  status: ProviderStatus;
+  message?: string;
+  dataAsOf: number | null;
+  fromLogs: boolean;
+  retryAt?: number;
+  limits: LimitView[];
+  maxPercent: number | null;
+  level: Level;
+}
+
+export interface IslandView {
+  providers: ProviderView[];
+  generatedAt: number;
+}
+
+export function levelFor(percent: number | null, warnPercent: number, criticalPercent: number): Level {
+  if (percent === null) return 'normal';
+  if (percent >= criticalPercent) return 'critical';
+  if (percent >= warnPercent) return 'warn';
+  return 'normal';
+}
+
+export interface ProviderViewInput {
+  id: string;
+  name: string;
+  shortName: string;
+  fromLogs: boolean;
+  staleAfterMs: number;
+  entry?: { latest: Snapshot; lastGood?: Snapshot; nextRunAt?: number };
+  now: number;
+  warnPercent: number;
+  criticalPercent: number;
+}
+
+export function buildProviderView(input: ProviderViewInput): ProviderView {
+  const { entry, now, warnPercent, criticalPercent } = input;
+  const base = { id: input.id, name: input.name, shortName: input.shortName, fromLogs: input.fromLogs };
+
+  if (!entry) {
+    return { ...base, source: null, status: 'stale', message: 'Checking…', dataAsOf: null, limits: [], maxPercent: null, level: 'normal' };
+  }
+
+  const { latest, lastGood } = entry;
+  const shown = latest.status === 'ok' ? latest : lastGood;
+  const status: ProviderStatus =
+    latest.status === 'ok' && now - latest.dataAsOf > input.staleAfterMs ? 'stale' : latest.status;
+
+  const limits: LimitView[] =
+    latest.status === 'not-found'
+      ? []
+      : (shown?.limits ?? []).map((limit) => {
+          const usedPercent = limit.resetsAt !== null && limit.resetsAt <= now ? null : limit.usedPercent;
+          return { ...limit, usedPercent, level: levelFor(usedPercent, warnPercent, criticalPercent) };
+        });
+
+  const percents = limits.map((l) => l.usedPercent).filter((p): p is number => p !== null);
+  const maxPercent = percents.length > 0 ? Math.max(...percents) : null;
+
+  return {
+    ...base,
+    plan: latest.plan ?? shown?.plan,
+    source: latest.source ?? shown?.source ?? null,
+    status,
+    message: latest.message,
+    dataAsOf: latest.status === 'not-found' ? null : (shown?.dataAsOf ?? null),
+    retryAt: latest.status === 'error' ? entry.nextRunAt : undefined,
+    limits,
+    maxPercent,
+    level: levelFor(maxPercent, warnPercent, criticalPercent),
+  };
+}

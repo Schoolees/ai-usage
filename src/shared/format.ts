@@ -1,0 +1,31 @@
+import { DAY, HOUR, MINUTE } from './time';
+
+export function formatReset(resetsAt: number | null, now: number, timeZone?: string): string {
+  if (resetsAt === null) return '';
+  const remaining = resetsAt - now;
+  if (remaining <= 0) return 'Reset since last seen';
+  if (remaining < DAY) {
+    const totalMinutes = Math.ceil(remaining / MINUTE);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours === 0) return `Resets in ${minutes} min`;
+    return minutes === 0 ? `Resets in ${hours} hr` : `Resets in ${hours} hr ${minutes} min`;
+  }
+  const text = new Intl.DateTimeFormat('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone })
+    .format(new Date(resetsAt))
+    .replace(/ /g, ' ') // ICU puts a narrow no-break space before AM/PM
+    .replace(',', '');
+  return `Resets ${text}`;
+}
+
+export function formatDuration(ms: number): string {
+  if (ms < MINUTE) return '<1 min';
+  if (ms < HOUR) return `${Math.floor(ms / MINUTE)} min`;
+  if (ms < DAY) return `${Math.floor(ms / HOUR)} hr`;
+  const days = Math.floor(ms / DAY);
+  return days === 1 ? '1 day' : `${days} days`;
+}
+
+export function formatPercent(percent: number): string {
+  return `${Math.round(percent)}%`;
+}
