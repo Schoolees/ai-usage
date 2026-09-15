@@ -52,7 +52,7 @@ describe('formatDuration', () => {
 });
 
 describe('formatPercent', () => {
-  it('rounds to a whole percent', () => {
-    expect(formatPercent(72.6)).toBe('73%');
+  it('floors to a whole percent, so it never shows a threshold the color has not reached', () => {
+    expect(formatPercent(72.6)).toBe('72%');
   });
 });

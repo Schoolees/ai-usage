@@ -30,7 +30,7 @@ export function Pill({ providers, expanded, onClick }: { providers: ProviderView
         return (
           <span key={provider.id} className={`pill-seg state-${state}`} data-testid={`pill-${provider.id}`} data-state={state}>
             <SegmentIcon provider={provider} state={state} />
-            {provider.maxPercent === null ? provider.shortName : `${provider.shortName} ${Math.round(provider.maxPercent)}%`}
+            {provider.maxPercent === null ? provider.shortName : `${provider.shortName} ${Math.floor(provider.maxPercent)}%`}
           </span>
         );
       })}

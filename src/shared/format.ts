@@ -27,5 +27,7 @@ export function formatDuration(ms: number): string {
 }
 
 export function formatPercent(percent: number): string {
-  return `${Math.round(percent)}%`;
+  // Floor, not round: the level/color is computed from the raw percent, so rounding up could
+  // show a threshold number (e.g. 80%) the color hasn't actually reached yet.
+  return `${Math.floor(percent)}%`;
 }
