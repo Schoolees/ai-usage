@@ -92,4 +92,21 @@ describe('SettingsApp', () => {
     });
     expect(screen.getByRole('alert').textContent).toContain('Warning threshold must be below the critical threshold');
   });
+
+  it("extracts the zod issue message from Electron's raw IPC error text, and re-fetches settings", async () => {
+    const api = fakeApi(async () => {
+      throw new Error(
+        "Error invoking remote method 'settings:set': ZodError: [{\"message\":\"Warning threshold must be below the critical threshold\"}]",
+      );
+    });
+    await renderSettings(api);
+    const warn = screen.getByLabelText('Warning at (%)');
+    fireEvent.change(warn, { target: { value: '99' } });
+    await act(async () => {
+      fireEvent.blur(warn);
+    });
+    expect(screen.getByRole('alert').textContent).toContain('Warning threshold must be below the critical threshold');
+    expect(screen.getByRole('alert').textContent).not.toContain('ZodError');
+    expect(api.getSettings).toHaveBeenCalledTimes(2);
+  });
 });

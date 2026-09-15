@@ -3,6 +3,17 @@ import type { Api, DisplayOption, ProviderOption } from '../../shared/ipc';
 import { providerSettings, type Settings, type SettingsPatch } from '../../shared/settings-schema';
 import { NumberInput } from './NumberInput';
 
+/**
+ * IPC errors arrive as Electron's raw "Error invoking remote method '...': ZodError: [...]"
+ * text. Pull out the zod issue's own message when present, otherwise just strip Electron's prefix.
+ */
+export function cleanErrorMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const zodMessage = /"message":"([^"]+)"/.exec(raw);
+  if (zodMessage) return zodMessage[1];
+  return raw.replace(/^Error invoking remote method '[^']*': /, '');
+}
+
 export function SettingsApp({ api = window.api }: { api?: Api }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [providers, setProviders] = useState<ProviderOption[]>([]);
@@ -24,7 +35,9 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
       setSettings(await api.setSettings(patch));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(cleanErrorMessage(e));
+      // The patch was rejected, so re-fetch to revert any NumberInput draft to the saved value.
+      setSettings(await api.getSettings());
     }
   };
 
