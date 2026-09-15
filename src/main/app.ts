@@ -12,7 +12,7 @@ import type { initLog } from './log';
 import { createProviders } from './providers';
 import { Scheduler, type ScheduledTask } from './scheduler';
 import { loadSettings, saveSettings } from './settings';
-import { defaultDetectDeps, listCandidateHomes, pickSource } from './sources/detect';
+import { createRunningDistroCache, defaultDetectDeps, distroFromHome, listCandidateHomes, pickSource } from './sources/detect';
 import { loadState, saveState } from './state-file';
 import { UsageStore } from './usage-store';
 import trayIcon from '../../resources/tray.ico?asset';
@@ -41,6 +41,8 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   const alerts = new AlertEngine(persisted.alertsFired);
   const plugins = createProviders();
   const detected: Record<string, DetectedSource[]> = {};
+  // Only running distros are probed (spec §4): scheduled fetches must never boot a stopped one.
+  const wslDistroCache = createRunningDistroCache(defaultDetectDeps().listRunningDistros);
 
   const islandDisplay = () => pickDisplay(listDisplays(), settings.displayId);
   const island = new IslandWindow(islandDisplay);
@@ -98,6 +100,12 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
         const source = pickSource(detected[plugin.id] ?? [], providerSettings(settings, plugin.id).sourceHome);
         if (!source) {
           return { providerId: plugin.id, source: null, status: 'not-found', dataAsOf: now, limits: [], message: plugin.notFoundMessage };
+        }
+        if (source.kind === 'wsl') {
+          const distro = distroFromHome(source.home);
+          if (distro && !(await wslDistroCache.isRunning(distro))) {
+            return { providerId: plugin.id, source, status: 'not-found', dataAsOf: now, limits: [], message: `${source.label} is not running` };
+          }
         }
         return plugin.fetch(source, now);
       },

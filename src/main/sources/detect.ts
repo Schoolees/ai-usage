@@ -58,6 +58,50 @@ export async function listCandidateHomes(deps: DetectDeps): Promise<Source[]> {
   return sources;
 }
 
+const WSL_HOME_RE = /^\\\\wsl\.localhost\\([^\\]+)\\/;
+
+/** Extracts the distro name from a `\\wsl.localhost\<distro>\...` home path, or null for a non-WSL home. */
+export function distroFromHome(home: string): string | null {
+  return WSL_HOME_RE.exec(home)?.[1] ?? null;
+}
+
+export interface RunningDistroCache {
+  isRunning(distro: string): Promise<boolean>;
+}
+
+/**
+ * Caches the set of running WSL distros so scheduled fetches never probe wsl.exe (and never
+ * touch \\wsl.localhost\<distro>, which would boot a stopped distro) more than once per ttlMs.
+ * A failing or hanging list() call is treated as "no running distros".
+ */
+export function createRunningDistroCache(
+  list: () => Promise<Buffer>,
+  ttlMs = 30_000,
+  now: () => number = Date.now,
+): RunningDistroCache {
+  let running = new Set<string>();
+  let fetchedAt = -Infinity;
+  let pending: Promise<void> | null = null;
+
+  async function refresh(): Promise<void> {
+    const output = await withTimeout(list(), WSL_PROBE_TIMEOUT_MS, Buffer.alloc(0));
+    running = new Set(parseWslList(output));
+    fetchedAt = now();
+  }
+
+  return {
+    async isRunning(distro: string): Promise<boolean> {
+      if (now() - fetchedAt > ttlMs) {
+        pending ??= refresh().finally(() => {
+          pending = null;
+        });
+        await pending;
+      }
+      return running.has(distro);
+    },
+  };
+}
+
 export function pickSource(detected: DetectedSource[], preferredHome: string | null): DetectedSource | null {
   if (preferredHome) {
     const preferred = detected.find((source) => source.home === preferredHome);

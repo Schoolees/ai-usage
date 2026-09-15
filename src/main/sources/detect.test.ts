@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { DetectedSource } from '../../shared/types';
-import { listCandidateHomes, parseWslList, pickSource, WSL_PROBE_TIMEOUT_MS, type DetectDeps } from './detect';
+import {
+  createRunningDistroCache,
+  distroFromHome,
+  listCandidateHomes,
+  parseWslList,
+  pickSource,
+  WSL_PROBE_TIMEOUT_MS,
+  type DetectDeps,
+} from './detect';
 
 const utf16 = (text: string) => Buffer.from(`\uFEFF${text}`, 'utf16le');
 
@@ -60,6 +68,48 @@ describe('listCandidateHomes', () => {
     );
     expect(result.map((s) => s.home)).toEqual(['C:\\Users\\Raymond', '\\\\wsl.localhost\\Debian\\home\\dev']);
   });
+});
+
+describe('distroFromHome', () => {
+  it('extracts the distro name from a wsl.localhost home path', () => {
+    expect(distroFromHome('\\\\wsl.localhost\\Ubuntu\\home\\me')).toBe('Ubuntu');
+    expect(distroFromHome('\\\\wsl.localhost\\Debian-12\\home\\dev')).toBe('Debian-12');
+  });
+
+  it('returns null for a non-WSL home', () => {
+    expect(distroFromHome('C:\\Users\\Raymond')).toBeNull();
+    expect(distroFromHome('/home/me')).toBeNull();
+  });
+});
+
+describe('createRunningDistroCache', () => {
+  it('calls list only once within the TTL, and again once the TTL elapses', async () => {
+    const list = vi.fn(async () => utf16('Ubuntu\r\n'));
+    let now = 0;
+    const cache = createRunningDistroCache(list, 30_000, () => now);
+
+    expect(await cache.isRunning('Ubuntu')).toBe(true);
+    expect(await cache.isRunning('Ubuntu')).toBe(true);
+    expect(list).toHaveBeenCalledTimes(1);
+
+    now = 29_999;
+    expect(await cache.isRunning('Ubuntu')).toBe(true);
+    expect(list).toHaveBeenCalledTimes(1);
+
+    now = 30_001;
+    expect(await cache.isRunning('Ubuntu')).toBe(true);
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports nothing running when the list call fails', async () => {
+    const cache = createRunningDistroCache(async () => Promise.reject(new Error('no wsl')));
+    expect(await cache.isRunning('Ubuntu')).toBe(false);
+  });
+
+  it('reports nothing running when the list call hangs past the probe timeout', async () => {
+    const cache = createRunningDistroCache(() => new Promise(() => {}));
+    expect(await cache.isRunning('Ubuntu')).toBe(false);
+  }, WSL_PROBE_TIMEOUT_MS + 1000);
 });
 
 describe('pickSource', () => {
