@@ -5,6 +5,11 @@ import { initLog } from './log';
 
 const log = initLog();
 
+// A throw that would otherwise crash the main process (e.g. a persistence error we didn't
+// anticipate) must not take the app down; log it and keep running.
+process.on('uncaughtException', (error) => log.error('uncaught exception', error));
+process.on('unhandledRejection', (error) => log.error('unhandled rejection', error));
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {

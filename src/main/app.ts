@@ -83,12 +83,18 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     if (!island.win.isDestroyed()) island.win.webContents.send(IPC.viewUpdate, view());
   };
 
+  function writeState(): void {
+    try {
+      saveState(stateFile, { lastGood: store.lastGoodMap(), alertsFired: alerts.firedKeys() });
+    } catch (error) {
+      log.warn('could not save state', error);
+    }
+  }
+
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   const persist = () => {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      saveState(stateFile, { lastGood: store.lastGoodMap(), alertsFired: alerts.firedKeys() });
-    }, 1000);
+    saveTimer = setTimeout(writeState, 1000);
   };
 
   const tasks = (): ScheduledTask[] =>
@@ -147,7 +153,11 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   function applySettings(next: Settings): Settings {
     const previous = settings;
     settings = next;
-    saveSettings(settingsFile, next);
+    try {
+      saveSettings(settingsFile, next);
+    } catch (error) {
+      log.warn('could not save settings', error);
+    }
     island.reposition();
     if (JSON.stringify(previous.providers) !== JSON.stringify(next.providers) || previous.claudeRefreshMs !== next.claudeRefreshMs) {
       scheduler.setTasks(tasks());
@@ -198,6 +208,12 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   setInterval(() => void detectAll(), 5 * MINUTE);
   // Staleness is time-based, so re-send the view even when no fetch happened.
   setInterval(pushView, 30_000);
+
+  // Flush any pending debounced write so the last alert keys and usage numbers survive quit.
+  app.on('before-quit', () => {
+    clearTimeout(saveTimer);
+    writeState();
+  });
 
   screen.on('display-added', () => island.reposition());
   screen.on('display-removed', () => island.reposition());
