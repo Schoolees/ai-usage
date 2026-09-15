@@ -3,6 +3,8 @@ import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import type { DetectedSource, Source } from '../../shared/types';
 
+export const WSL_PROBE_TIMEOUT_MS = 3000;
+
 export interface DetectDeps {
   platform: NodeJS.Platform;
   homedir(): string;
@@ -43,7 +45,7 @@ export async function listCandidateHomes(deps: DetectDeps): Promise<Source[]> {
   const sources: Source[] = [{ kind: 'windows', label: isWindows ? 'Windows' : 'Local', home: deps.homedir() }];
   if (!isWindows) return sources;
 
-  const timeoutMs = deps.timeoutMs ?? 3000;
+  const timeoutMs = deps.timeoutMs ?? WSL_PROBE_TIMEOUT_MS;
   // Only running distros: touching \\wsl.localhost\<distro> would boot a stopped one.
   const distros = parseWslList(await withTimeout(deps.listRunningDistros(), timeoutMs, Buffer.alloc(0)));
   for (const distro of distros) {
@@ -73,8 +75,11 @@ export function defaultDetectDeps(): DetectDeps {
     homedir,
     listRunningDistros: () =>
       new Promise((resolve, reject) => {
-        execFile('wsl.exe', ['-l', '--running', '-q'], { encoding: 'buffer', windowsHide: true }, (error, stdout) =>
-          error ? reject(error) : resolve(stdout),
+        execFile(
+          'wsl.exe',
+          ['-l', '--running', '-q'],
+          { encoding: 'buffer', windowsHide: true, timeout: WSL_PROBE_TIMEOUT_MS, killSignal: 'SIGKILL' },
+          (error, stdout) => (error ? reject(error) : resolve(stdout)),
         );
       }),
     readdir: (path) => readdir(path),

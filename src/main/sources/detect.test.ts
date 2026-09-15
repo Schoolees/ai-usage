@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DetectedSource } from '../../shared/types';
-import { listCandidateHomes, parseWslList, pickSource, type DetectDeps } from './detect';
+import { listCandidateHomes, parseWslList, pickSource, WSL_PROBE_TIMEOUT_MS, type DetectDeps } from './detect';
 
 const utf16 = (text: string) => Buffer.from(`\uFEFF${text}`, 'utf16le');
 
@@ -14,6 +14,12 @@ function deps(overrides: Partial<DetectDeps>): DetectDeps {
     ...overrides,
   };
 }
+
+describe('constants', () => {
+  it('WSL_PROBE_TIMEOUT_MS is 3000', () => {
+    expect(WSL_PROBE_TIMEOUT_MS).toBe(3000);
+  });
+});
 
 describe('parseWslList', () => {
   it('decodes UTF-16LE output and drops the BOM and blank lines', () => {
