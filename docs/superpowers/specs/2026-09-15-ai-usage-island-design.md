@@ -45,6 +45,15 @@ A Codex `rate_limits` record, as observed on this machine:
 - Tokens are sent only to their own provider's server.
 - The app **never refreshes or rewrites tokens**, because rotating a refresh token could sign the CLI out. An expired token means `auth-expired` status.
 
+### Spike findings (2026-09-15)
+
+- Claude usage URL: `https://api.anthropic.com/api/oauth/usage`; headers: `Authorization: Bearer <token>`, `anthropic-beta: oauth-2025-04-20`. Returned HTTP 200 on the first try; no fallback URL search was needed.
+- `utilization` unit: percent 0–100 (observed `63.0`, `39.0`, `0.0`), matching the assumed shape. `resets_at` format: ISO 8601 string with microseconds and UTC offset (e.g. `2026-09-15T08:50:00.926998+00:00`), matching the assumed shape.
+- Window keys observed (top-level object with both `utilization` and `resets_at`): `five_hour`, `seven_day`, `nimbus_quill` (an inactive/experimental window: `utilization: 0.0`, `resets_at: null`). `seven_day_opus` is present but `null`, as assumed.
+- Differences from the assumed shape: the real response has many more top-level keys than the four in the brief's example. Most are `null` placeholders for internal/experimental limit types with obfuscated codenames (`seven_day_oauth_apps`, `seven_day_sonnet`, `seven_day_cowork`, `seven_day_omelette`, `tangelo`, `iguana_necktie`, `omelette_promotional`, `cinder_cove`, `copper_kite`, `harbor_lantern`, `amber_ladder`, `juniper_tide`, `cedar_ember`) — a parser should ignore unknown top-level keys rather than assume a fixed key set. There are also three additional structured top-level keys not in the assumed shape: `limits` (an array of `{kind, group, percent, severity, resets_at, scope, is_active}` records — a normalized alternate view of the same session/weekly windows, including a model-scoped weekly entry), `spend` (usage-credit spend/balance info, all `null`/disabled on this account), and `seven_day_breakdown` (a per-surface percent breakdown, e.g. `claude_code`, `chat`, `cowork`, `other`). `extra_usage` matches the assumed shape (`{is_enabled: false, ...}`) but has more fields than just `is_enabled`. Task 4's parser should read `five_hour` and `seven_day` (and optionally `seven_day_opus`) by name and not assume those are the only top-level keys.
+- ChatGPT live usage call: none found; Codex stays log-based. (`codex` CLI is not installed on this machine, so the search was skipped per the optional-step ruling.)
+- Fixture: `src/main/providers/claude/fixtures/usage.json`.
+
 ## 3. The island and its windows
 
 ### Island window
