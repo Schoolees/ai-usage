@@ -1,15 +1,27 @@
-import { app, BrowserWindow } from 'electron';
-import { join } from 'node:path';
+import { app } from 'electron';
+import { APP_ID } from '../shared/app-id';
+import { startApp, type RunningApp } from './app';
+import { initLog } from './log';
 
-app.whenReady().then(() => {
-  const win = new BrowserWindow({
-    width: 320,
-    height: 120,
-    webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: true, contextIsolation: true },
-  });
-  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
-    void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/island.html`);
-  } else {
-    void win.loadFile(join(__dirname, '../renderer/island.html'));
-  }
-});
+const log = initLog();
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.setAppUserModelId(APP_ID);
+  let running: RunningApp | undefined;
+
+  app.on('second-instance', () => running?.island.show());
+  // The app lives in the island and tray; closing windows must not quit it.
+  app.on('window-all-closed', () => {});
+
+  app
+    .whenReady()
+    .then(async () => {
+      running = await startApp(log);
+    })
+    .catch((error: unknown) => {
+      log.error('startup failed', error);
+      app.quit();
+    });
+}
