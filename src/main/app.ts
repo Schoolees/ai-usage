@@ -133,12 +133,9 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     pushView();
   }
 
-  await detectAll();
-  const scheduler = new Scheduler(tasks(), onSnapshot);
-  scheduler.start();
-  setInterval(() => void detectAll(), 5 * MINUTE);
-  // Staleness is time-based, so re-send the view even when no fetch happened.
-  setInterval(pushView, 30_000);
+  // Created empty and not started so IPC handlers below can reference it immediately; once
+  // detectAll() resolves, setTasks(tasks()) supplies the real tasks and starts the scheduler.
+  const scheduler = new Scheduler([], onSnapshot);
 
   function applyPlatformSettings(): void {
     if (settings.hideInFullscreen) fullscreenWatch?.start();
@@ -161,6 +158,8 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     return settings;
   }
 
+  // Registered before the first await (detectAll, below) so the renderer's earliest getView(),
+  // resizeIsland and setExpanded calls are never dropped while source detection is in flight.
   ipcMain.handle(IPC.viewGet, () => view());
   ipcMain.handle(IPC.refresh, (_event, olderThanMs?: number) => scheduler.refreshNow({ olderThanMs }));
   ipcMain.on(IPC.islandResize, (_event, width: number, height: number) => island.resize(width, height));
@@ -193,6 +192,12 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     },
     quit: () => app.quit(),
   });
+
+  await detectAll();
+  scheduler.setTasks(tasks());
+  setInterval(() => void detectAll(), 5 * MINUTE);
+  // Staleness is time-based, so re-send the view even when no fetch happened.
+  setInterval(pushView, 30_000);
 
   screen.on('display-added', () => island.reposition());
   screen.on('display-removed', () => island.reposition());
