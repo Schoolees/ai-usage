@@ -57,7 +57,7 @@ export function IslandApp({ api = window.api, clock = Date.now }: { api?: Api; c
   }, [api]);
 
   return (
-    <div ref={rootRef} className="island">
+    <div ref={rootRef} className={expanded ? 'island expanded' : 'island'}>
       <Pill providers={view?.providers ?? []} expanded={expanded} onClick={() => setExpanded(!expanded)} />
       {expanded && view && (
         <Panel

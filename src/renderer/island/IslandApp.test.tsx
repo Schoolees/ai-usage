@@ -30,17 +30,20 @@ function fakeApi(view: IslandView) {
 describe('IslandApp', () => {
   it('expands on click, refreshes stale data and collapses on Escape', async () => {
     const { api } = fakeApi({ providers: [claude, codex], generatedAt: now });
-    render(<IslandApp api={api} clock={() => now} />);
+    const { container } = render(<IslandApp api={api} clock={() => now} />);
     await act(async () => {});
 
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(container.querySelector('.island')?.className).toBe('island');
     fireEvent.click(screen.getByRole('button', { name: /usage details/i }));
     expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(container.querySelector('.island')?.className).toBe('island expanded');
     expect(api.setExpanded).toHaveBeenLastCalledWith(true);
     expect(api.refresh).toHaveBeenCalledWith(30_000);
 
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(container.querySelector('.island')?.className).toBe('island');
     expect(api.setExpanded).toHaveBeenLastCalledWith(false);
   });
 

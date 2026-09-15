@@ -20,6 +20,10 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  padding: 0; /* collapsed: no transparent padding around the pill, so it doesn't eat clicks */
+}
+
+.island.expanded {
   padding: 0 14px 18px; /* room for the panel shadow inside the transparent window */
 }
 
@@ -38,8 +42,12 @@ button {
   border-radius: 0 0 14px 14px;
   background: #0b0b0b;
   color: #eee;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 40%);
+  box-shadow: none; /* collapsed: no shadow, so it isn't clipped by the tight transparent window */
   white-space: nowrap;
+}
+
+.island.expanded .pill {
+  box-shadow: 0 4px 12px rgb(0 0 0 / 40%);
 }
 
 .pill-seg {
