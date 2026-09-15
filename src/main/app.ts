@@ -21,7 +21,8 @@ import { createTray } from './tray';
 import { AlertEngine } from './alert-engine';
 import { alertText } from './alert-text';
 import { showAlert } from './notifier';
-// [task-16] fullscreen imports
+import { createForegroundReader } from './foreground-window';
+import { FullscreenWatch } from './fullscreen';
 
 export interface RunningApp {
   island: IslandWindow;
@@ -131,6 +132,13 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   // Staleness is time-based, so re-send the view even when no fetch happened.
   setInterval(pushView, 30_000);
 
+  function applyPlatformSettings(): void {
+    if (settings.hideInFullscreen) fullscreenWatch?.start();
+    else fullscreenWatch?.stop();
+    // In dev the login item would point at electron.exe, so only the installed app registers itself.
+    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: settings.openAtLogin });
+  }
+
   function applySettings(next: Settings): Settings {
     const previous = settings;
     settings = next;
@@ -139,7 +147,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     if (JSON.stringify(previous.providers) !== JSON.stringify(next.providers) || previous.claudeRefreshMs !== next.claudeRefreshMs) {
       scheduler.setTasks(tasks());
     }
-    // [task-16] apply login item + fullscreen watch
+    applyPlatformSettings();
     trayHandle.rebuild();
     pushView();
     return settings;
@@ -183,7 +191,21 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   screen.on('display-metrics-changed', () => island.reposition());
   powerMonitor.on('resume', () => void scheduler.refreshNow());
 
-  // [task-16] fullscreen watch + login item
+  const readForeground = (() => {
+    try {
+      return createForegroundReader();
+    } catch (error) {
+      log.warn('fullscreen detection unavailable', error);
+      return null;
+    }
+  })();
+  // GetWindowRect reports physical pixels, so compare against the display in physical pixels too.
+  const fullscreenWatch = readForeground
+    ? new FullscreenWatch(readForeground, () => screen.dipToScreenRect(null, islandDisplay().bounds), (hidden) =>
+        island.setFullscreenHidden(hidden),
+      )
+    : null;
+  applyPlatformSettings();
 
   return { island, scheduler, tray: trayHandle };
 }
