@@ -1,10 +1,12 @@
-import koffi from 'koffi';
 import type { ForegroundWindow } from './fullscreen';
 
 /** Returns a reader for the current foreground window, or null when not on Windows. */
 export function createForegroundReader(): (() => ForegroundWindow | null) | null {
   if (process.platform !== 'win32') return null;
 
+  // Loaded lazily, after the platform check, so a koffi load failure (missing prebuild, ABI
+  // mismatch, broken node_modules) can't crash the main process before app.ts's try/catch runs.
+  const koffi = require('koffi') as typeof import('koffi');
   const user32 = koffi.load('user32.dll');
   // Named types are referenced by name in the prototypes below.
   koffi.pointer('HWND', koffi.opaque());
