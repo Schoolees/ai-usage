@@ -15,13 +15,16 @@ import { loadSettings, saveSettings } from './settings';
 import { defaultDetectDeps, listCandidateHomes, pickSource } from './sources/detect';
 import { loadState, saveState } from './state-file';
 import { UsageStore } from './usage-store';
-// [task-14] tray + settings window imports
+import trayIcon from '../../resources/tray.ico?asset';
+import { openSettingsWindow } from './settings-window';
+import { createTray } from './tray';
 // [task-15] alert imports
 // [task-16] fullscreen imports
 
 export interface RunningApp {
   island: IslandWindow;
   scheduler: Scheduler;
+  tray: ReturnType<typeof createTray>;
 }
 
 export async function startApp(log: ReturnType<typeof initLog>): Promise<RunningApp> {
@@ -121,6 +124,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
       scheduler.setTasks(tasks());
     }
     // [task-16] apply login item + fullscreen watch
+    trayHandle.rebuild();
     pushView();
     return settings;
   }
@@ -144,7 +148,19 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     }));
   });
   ipcMain.handle(IPC.displaysGet, (): DisplayOption[] => listDisplays().map(({ id, label, primary }) => ({ id, label, primary })));
-  // [task-14] openSettings IPC + tray
+  ipcMain.on(IPC.openSettings, () => openSettingsWindow());
+
+  const trayHandle = createTray(trayIcon, {
+    toggleIsland: () => island.toggleUserHidden(),
+    isIslandVisible: () => island.isUserVisible(),
+    refresh: () => void scheduler.refreshNow(),
+    openSettings: () => openSettingsWindow(),
+    getOpenAtLogin: () => settings.openAtLogin,
+    setOpenAtLogin: (value) => {
+      applySettings(mergeSettings(settings, { openAtLogin: value }));
+    },
+    quit: () => app.quit(),
+  });
 
   screen.on('display-added', () => island.reposition());
   screen.on('display-removed', () => island.reposition());
@@ -153,5 +169,5 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
 
   // [task-16] fullscreen watch + login item
 
-  return { island, scheduler };
+  return { island, scheduler, tray: trayHandle };
 }

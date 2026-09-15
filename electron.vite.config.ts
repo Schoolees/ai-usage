@@ -11,6 +11,7 @@ export default defineConfig({
       rollupOptions: {
         input: {
           island: resolve(__dirname, 'src/renderer/island.html'),
+          settings: resolve(__dirname, 'src/renderer/settings.html'),
         },
       },
     },
