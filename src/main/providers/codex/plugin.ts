@@ -49,10 +49,15 @@ export function createCodexPlugin(): ProviderPlugin {
       if (cache?.key === key) return codexSnapshot(cache.record, source, now);
 
       for (const log of logs) {
-        const record = findLastRateLimits(await readTail(log));
-        if (record) {
-          cache = { key, record };
-          return codexSnapshot(record, source, now);
+        try {
+          const record = findLastRateLimits(await readTail(log));
+          if (record) {
+            cache = { key, record };
+            return codexSnapshot(record, source, now);
+          }
+        } catch {
+          // Log was deleted or became unreadable; try the next one.
+          continue;
         }
       }
       return notFound(source, now, `No Codex usage recorded yet in ${source.label}`);

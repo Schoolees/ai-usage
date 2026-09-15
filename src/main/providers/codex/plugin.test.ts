@@ -80,4 +80,25 @@ describe('createCodexPlugin', () => {
     writeRollout('2026/09/15', 'rollout-new.jsonl', 99, 2_000);
     expect((await plugin.fetch(source, now)).limits[0].usedPercent).toBe(42);
   });
+
+  it('skips a log that cannot be read', async () => {
+    writeRollout('2026/09/14', 'rollout-old.jsonl', 7, 1_000);
+    const dir = join(home, '.codex', 'sessions', '2026', '09', '15');
+    mkdirSync(dir, { recursive: true });
+    // Create a directory with the rollout filename so open() throws EISDIR
+    mkdirSync(join(dir, 'rollout-new.jsonl'));
+    utimesSync(join(dir, 'rollout-new.jsonl'), 2_000, 2_000);
+    const snapshot = await createCodexPlugin().fetch(source, now);
+    expect(snapshot).toMatchObject({ status: 'ok', providerId: 'codex' });
+    expect(snapshot.limits[0].usedPercent).toBe(7);
+  });
+
+  it('returns not-found when no log has rate limits', async () => {
+    const dir = join(home, '.codex', 'sessions', '2026', '09', '15');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'rollout-meta.jsonl'), '{"type":"session_meta","payload":{}}\n');
+    utimesSync(join(dir, 'rollout-meta.jsonl'), 1_000, 1_000);
+    const snapshot = await createCodexPlugin().fetch(source, now);
+    expect(snapshot).toMatchObject({ providerId: 'codex', status: 'not-found', limits: [], message: 'No Codex usage recorded yet in Local' });
+  });
 });
