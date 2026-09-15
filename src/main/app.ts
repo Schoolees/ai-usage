@@ -18,7 +18,9 @@ import { UsageStore } from './usage-store';
 import trayIcon from '../../resources/tray.ico?asset';
 import { openSettingsWindow } from './settings-window';
 import { createTray } from './tray';
-// [task-15] alert imports
+import { AlertEngine } from './alert-engine';
+import { alertText } from './alert-text';
+import { showAlert } from './notifier';
 // [task-16] fullscreen imports
 
 export interface RunningApp {
@@ -35,7 +37,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   let settings: Settings = loadSettings(settingsFile);
   const persisted = loadState(stateFile);
   const store = new UsageStore(persisted.lastGood);
-  // [task-15] alert engine
+  const alerts = new AlertEngine(persisted.alertsFired);
   const plugins = createProviders();
   const detected: Record<string, DetectedSource[]> = {};
 
@@ -82,7 +84,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   const persist = () => {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      saveState(stateFile, { lastGood: store.lastGoodMap(), alertsFired: persisted.alertsFired });
+      saveState(stateFile, { lastGood: store.lastGoodMap(), alertsFired: alerts.firedKeys() });
     }, 1000);
   };
 
@@ -102,7 +104,21 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
 
   function onSnapshot(snapshot: Snapshot, nextRunAt: number): void {
     const { previous } = store.update(snapshot, nextRunAt);
-    void previous; // [task-15] evaluate alerts against previous?.lastGood
+    if (settings.alertsEnabled) {
+      const now = Date.now();
+      alerts.prune(now);
+      const events = alerts.evaluate({
+        previous: previous?.lastGood,
+        next: snapshot,
+        warnPercent: settings.warnPercent,
+        criticalPercent: settings.criticalPercent,
+        now,
+      });
+      for (const event of events) {
+        const providerName = plugins.find((plugin) => plugin.id === event.providerId)?.name ?? event.providerId;
+        showAlert(alertText(event, providerName, now), () => island.expand());
+      }
+    }
     if (snapshot.status === 'error') log.warn(`${snapshot.providerId}: ${snapshot.message ?? 'error'}`);
     persist();
     pushView();
