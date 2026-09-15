@@ -15,12 +15,18 @@ describe('Pill', () => {
   });
 
   it('marks stale and no-data providers', () => {
-    const stale: ProviderView = { ...claude, status: 'auth-expired' };
-    const empty: ProviderView = { ...codex, status: 'not-found', limits: [], maxPercent: null, level: 'normal' };
+    const stale: ProviderView = { ...claude, status: 'auth-expired', stale: true };
+    const empty: ProviderView = { ...codex, status: 'not-found', limits: [], maxPercent: null, level: 'normal', stale: true };
     render(<Pill providers={[stale, empty]} expanded={false} onClick={() => {}} />);
     expect(screen.getByTestId('pill-claude').dataset.state).toBe('stale');
     expect(screen.getByTestId('pill-codex').dataset.state).toBe('no-data');
     expect(screen.getByTestId('pill-codex').textContent).toBe('Codex');
+  });
+
+  it('keeps a critical state through a transient error while last-good data is fresh', () => {
+    const transientError: ProviderView = { ...codex, status: 'error', stale: false };
+    render(<Pill providers={[transientError]} expanded={false} onClick={() => {}} />);
+    expect(screen.getByTestId('pill-codex').dataset.state).toBe('critical');
   });
 
   it('calls onClick and exposes the expanded state', () => {

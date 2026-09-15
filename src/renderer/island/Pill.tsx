@@ -5,7 +5,7 @@ const PROVIDER_COLORS: Record<string, string> = { claude: '#d97757', codex: '#10
 
 function segmentState(provider: ProviderView): 'no-data' | 'stale' | ProviderView['level'] {
   if (provider.maxPercent === null) return 'no-data';
-  if (provider.status !== 'ok') return 'stale';
+  if (provider.stale) return 'stale';
   return provider.level;
 }
 

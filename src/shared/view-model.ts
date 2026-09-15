@@ -20,6 +20,8 @@ export interface ProviderView {
   limits: LimitView[];
   maxPercent: number | null;
   level: Level;
+  /** True when the shown numbers should be dimmed/greyed: no data, expired auth, not found, or last-good is older than staleAfterMs. A transient error does not make fresh data stale. */
+  stale: boolean;
 }
 
 export interface IslandView {
@@ -51,13 +53,19 @@ export function buildProviderView(input: ProviderViewInput): ProviderView {
   const base = { id: input.id, name: input.name, shortName: input.shortName, fromLogs: input.fromLogs };
 
   if (!entry) {
-    return { ...base, source: null, status: 'stale', message: 'Checking…', dataAsOf: null, limits: [], maxPercent: null, level: 'normal' };
+    return { ...base, source: null, status: 'stale', message: 'Checking…', dataAsOf: null, limits: [], maxPercent: null, level: 'normal', stale: true };
   }
 
   const { latest, lastGood } = entry;
   const shown = latest.status === 'ok' ? latest : lastGood;
   const status: ProviderStatus =
     latest.status === 'ok' && now - latest.dataAsOf > input.staleAfterMs ? 'stale' : latest.status;
+
+  // A transient error must not dim the pill while last-good data is still fresh (spec §5).
+  const stale: boolean =
+    latest.status === 'auth-expired' || latest.status === 'not-found'
+      ? true
+      : shown === undefined || now - shown.dataAsOf > input.staleAfterMs;
 
   const limits: LimitView[] =
     latest.status === 'not-found'
@@ -81,5 +89,6 @@ export function buildProviderView(input: ProviderViewInput): ProviderView {
     limits,
     maxPercent,
     level: levelFor(maxPercent, warnPercent, criticalPercent),
+    stale,
   };
 }

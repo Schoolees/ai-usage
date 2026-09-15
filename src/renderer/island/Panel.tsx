@@ -43,7 +43,7 @@ export function Panel({ view, now, onRefresh, onOpenSettings, onOpenUsage }: Pan
           </header>
           {provider.status !== 'ok' && <StatusLine provider={provider} now={now} onOpenSettings={onOpenSettings} />}
           {provider.limits.map((limit) => (
-            <LimitRow key={limit.id} limit={limit} now={now} dim={provider.status !== 'ok'} />
+            <LimitRow key={limit.id} limit={limit} now={now} dim={provider.stale} />
           ))}
         </section>
       ))}

@@ -34,7 +34,7 @@ describe('Panel', () => {
   });
 
   it('shows a status line and dims rows for a non-ok provider', () => {
-    const expired: ProviderView = { ...claude, status: 'auth-expired', message: 'Login expired · run claude to refresh' };
+    const expired: ProviderView = { ...claude, status: 'auth-expired', stale: true, message: 'Login expired · run claude to refresh' };
     render(<Panel view={{ providers: [expired], generatedAt: now }} now={now} {...handlers()} />);
     expect(screen.getByRole('status').textContent).toContain('Login expired · run claude to refresh');
     expect(screen.getByTestId('limit-five_hour').className).toContain('dim');

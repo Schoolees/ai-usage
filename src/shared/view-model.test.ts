@@ -42,25 +42,45 @@ describe('levelFor', () => {
 describe('buildProviderView', () => {
   it('shows fresh ok data with levels and the highest percent', () => {
     const view = buildProviderView(input({ latest: okSnapshot(now - 60_000, 86) }));
-    expect(view).toMatchObject({ status: 'ok', plan: 'Max (5x)', source, maxPercent: 86, level: 'warn', dataAsOf: now - 60_000 });
+    expect(view).toMatchObject({ status: 'ok', plan: 'Max (5x)', source, maxPercent: 86, level: 'warn', dataAsOf: now - 60_000, stale: false });
     expect(view.limits.map((l) => l.level)).toEqual(['warn', 'normal']);
   });
 
   it('marks ok data as stale once it is older than staleAfterMs', () => {
-    expect(buildProviderView(input({ latest: okSnapshot(now - 601_000) })).status).toBe('stale');
+    const view = buildProviderView(input({ latest: okSnapshot(now - 601_000) }));
+    expect(view).toMatchObject({ status: 'stale', stale: true });
   });
 
-  it('keeps last-good limits when the latest fetch failed, with retry time', () => {
+  it('keeps last-good limits when the latest fetch failed, with retry time, and is not stale while last-good is fresh', () => {
     const failed: Snapshot = { providerId: 'claude', source, status: 'error', dataAsOf: now, limits: [], message: "Couldn't reach Anthropic" };
     const view = buildProviderView(input({ latest: failed, lastGood: okSnapshot(now - 120_000), nextRunAt: now + 120_000 }));
-    expect(view).toMatchObject({ status: 'error', message: "Couldn't reach Anthropic", retryAt: now + 120_000, maxPercent: 73, plan: 'Max (5x)' });
+    expect(view).toMatchObject({
+      status: 'error',
+      message: "Couldn't reach Anthropic",
+      retryAt: now + 120_000,
+      maxPercent: 73,
+      plan: 'Max (5x)',
+      stale: false,
+    });
     expect(view.limits).toHaveLength(2);
+  });
+
+  it('marks an error stale once last-good is older than staleAfterMs', () => {
+    const failed: Snapshot = { providerId: 'claude', source, status: 'error', dataAsOf: now, limits: [], message: "Couldn't reach Anthropic" };
+    const view = buildProviderView(input({ latest: failed, lastGood: okSnapshot(now - 601_000), nextRunAt: now + 120_000 }));
+    expect(view).toMatchObject({ status: 'error', stale: true });
+  });
+
+  it('marks expired auth as stale even with fresh last-good data', () => {
+    const expired: Snapshot = { providerId: 'claude', source, plan: 'Max (5x)', status: 'auth-expired', dataAsOf: now, limits: [], message: 'Login expired · run claude to refresh' };
+    const view = buildProviderView(input({ latest: expired, lastGood: okSnapshot(now - 60_000) }));
+    expect(view).toMatchObject({ status: 'auth-expired', stale: true });
   });
 
   it('shows no limits when the provider is not found', () => {
     const missing: Snapshot = { providerId: 'claude', source: null, status: 'not-found', dataAsOf: now, limits: [], message: 'No login' };
     const view = buildProviderView(input({ latest: missing, lastGood: okSnapshot(now - 1) }));
-    expect(view).toMatchObject({ status: 'not-found', limits: [], maxPercent: null, message: 'No login' });
+    expect(view).toMatchObject({ status: 'not-found', limits: [], maxPercent: null, message: 'No login', stale: true });
   });
 
   it('hides the percent of a window whose reset has passed', () => {
@@ -72,6 +92,13 @@ describe('buildProviderView', () => {
   });
 
   it('reports a checking state before the first fetch', () => {
-    expect(buildProviderView(input(undefined))).toMatchObject({ status: 'stale', message: 'Checking…', limits: [], maxPercent: null, dataAsOf: null });
+    expect(buildProviderView(input(undefined))).toMatchObject({
+      status: 'stale',
+      message: 'Checking…',
+      limits: [],
+      maxPercent: null,
+      dataAsOf: null,
+      stale: true,
+    });
   });
 });
