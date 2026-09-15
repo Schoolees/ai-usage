@@ -43,6 +43,32 @@ describe('findLastRateLimits', () => {
     expect(findLastRateLimits(jsonl)?.planType).toBe('prolite');
   });
 
+  it('skips newer records that carry no windows (e.g. a trailing limit_id "premium" record)', () => {
+    const premium = { limit_id: 'premium', limit_name: null, primary: null, secondary: null, credits: weekly.credits, plan_type: 'plus' };
+    const jsonl = [
+      tokenCount('2026-09-15T06:54:04.187Z', {
+        ...weekly,
+        plan_type: 'plus',
+        primary: { used_percent: 99, window_minutes: 300, resets_at: 1789472546 },
+        secondary: { used_percent: 16, window_minutes: 10080, resets_at: 1790059346 },
+      }),
+      tokenCount('2026-09-15T06:54:05.349Z', premium),
+      tokenCount('2026-09-15T06:55:05.854Z', premium),
+    ].join('\n');
+
+    expect(findLastRateLimits(jsonl)).toEqual({
+      timestampMs: Date.parse('2026-09-15T06:54:04.187Z'),
+      planType: 'plus',
+      primary: { usedPercent: 99, windowMinutes: 300, resetsAtSec: 1789472546 },
+      secondary: { usedPercent: 16, windowMinutes: 10080, resetsAtSec: 1790059346 },
+    });
+  });
+
+  it('returns null when every record lacks windows', () => {
+    const jsonl = tokenCount('2026-09-15T06:55:05.854Z', { ...weekly, limit_id: 'premium', primary: null, secondary: null });
+    expect(findLastRateLimits(jsonl)).toBeNull();
+  });
+
   it('returns null when no record exists', () => {
     expect(findLastRateLimits('{"type":"session_meta"}\n')).toBeNull();
   });

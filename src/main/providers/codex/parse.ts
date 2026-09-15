@@ -49,11 +49,15 @@ export function findLastRateLimits(jsonl: string): CodexRateLimitRecord | null {
     if (payload?.type !== 'token_count' || !rateLimits) continue;
     const timestampMs = typeof event?.timestamp === 'string' ? Date.parse(event.timestamp) : NaN;
     if (Number.isNaN(timestampMs)) continue;
+    const primary = toWindow(rateLimits.primary);
+    const secondary = toWindow(rateLimits.secondary);
+    // Codex also logs records for other limit ids (e.g. "premium") with no windows; they would hide the real ones.
+    if (!primary && !secondary) continue;
     return {
       timestampMs,
       planType: typeof rateLimits.plan_type === 'string' ? rateLimits.plan_type : null,
-      primary: toWindow(rateLimits.primary),
-      secondary: toWindow(rateLimits.secondary),
+      primary,
+      secondary,
     };
   }
   return null;
