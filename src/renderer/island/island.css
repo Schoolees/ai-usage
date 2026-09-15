@@ -68,7 +68,7 @@ button {
 .state-no-data { color: #777; }
 
 .panel {
-  width: 340px;
+  width: 360px;
   box-sizing: border-box;
   padding: 12px 14px 10px;
   border: 1px solid #3a3a3a;
@@ -100,6 +100,13 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+.foot-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .source::before { content: '·'; margin-right: 1px; }
