@@ -22,7 +22,8 @@ export function openSettingsWindow(theme: SystemTheme): void {
     maximizable: false,
     autoHideMenuBar: true,
     show: false,
-    // Custom title bar; Windows draws the close button over it. Mica/solid colors follow Windows personalization.
+    // Custom title bar with an in-page close button (SettingsApp). No titleBarOverlay: its caption button shows
+    // Chromium's tooltip and Windows' classic tooltip at the same time. Mica/solid colors follow Windows personalization.
     titleBarStyle: 'hidden',
     ...chromeOptions(theme),
     webPreferences: {
@@ -45,16 +46,14 @@ function chromeOptions(theme: SystemTheme) {
   return {
     backgroundColor: chrome.backgroundColor,
     backgroundMaterial: chrome.backgroundMaterial,
-    titleBarOverlay: { ...chrome.titleBarOverlay, height: 36 },
   };
 }
 
 /** Re-apply native chrome and push the theme when Windows personalization changes while the window is open. */
 export function updateSettingsWindowTheme(theme: SystemTheme): void {
   if (!settingsWindow || settingsWindow.isDestroyed()) return;
-  const { backgroundColor, backgroundMaterial, titleBarOverlay } = chromeOptions(theme);
+  const { backgroundColor, backgroundMaterial } = chromeOptions(theme);
   settingsWindow.setBackgroundMaterial(backgroundMaterial);
   settingsWindow.setBackgroundColor(backgroundColor);
-  settingsWindow.setTitleBarOverlay(titleBarOverlay);
   settingsWindow.webContents.send(IPC.themeUpdate, theme);
 }

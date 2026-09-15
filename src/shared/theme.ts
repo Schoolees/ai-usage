@@ -72,15 +72,10 @@ export function themeVariables(theme: SystemTheme): Record<'--primary' | '--prim
 export interface WindowChrome {
   backgroundMaterial: 'mica' | 'none';
   backgroundColor: string;
-  titleBarOverlay: { color: string; symbolColor: string };
 }
 
 /** Native window colors for the settings window: Mica when transparency effects are on, Windows' solid surface otherwise. */
 export function windowChrome(theme: SystemTheme): WindowChrome {
-  const symbolColor = theme.mode === 'dark' ? '#ffffff' : '#1b1b1b';
-  if (theme.transparency) {
-    return { backgroundMaterial: 'mica', backgroundColor: '#00000000', titleBarOverlay: { color: '#00000000', symbolColor } };
-  }
-  const surface = theme.mode === 'dark' ? '#202020' : '#f3f3f3';
-  return { backgroundMaterial: 'none', backgroundColor: surface, titleBarOverlay: { color: surface, symbolColor } };
+  if (theme.transparency) return { backgroundMaterial: 'mica', backgroundColor: '#00000000' };
+  return { backgroundMaterial: 'none', backgroundColor: theme.mode === 'dark' ? '#202020' : '#f3f3f3' };
 }

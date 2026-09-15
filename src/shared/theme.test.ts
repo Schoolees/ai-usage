@@ -75,11 +75,10 @@ describe('themeVariables', () => {
 });
 
 describe('windowChrome', () => {
-  it('uses the Mica backdrop and a see-through title bar when transparency is on', () => {
+  it('uses the Mica backdrop when transparency is on', () => {
     expect(windowChrome({ mode: 'dark', transparency: true, accent: null })).toEqual({
       backgroundMaterial: 'mica',
       backgroundColor: '#00000000',
-      titleBarOverlay: { color: '#00000000', symbolColor: '#ffffff' },
     });
   });
 
@@ -87,12 +86,10 @@ describe('windowChrome', () => {
     expect(windowChrome({ mode: 'dark', transparency: false, accent: null })).toEqual({
       backgroundMaterial: 'none',
       backgroundColor: '#202020',
-      titleBarOverlay: { color: '#202020', symbolColor: '#ffffff' },
     });
     expect(windowChrome({ mode: 'light', transparency: false, accent: null })).toEqual({
       backgroundMaterial: 'none',
       backgroundColor: '#f3f3f3',
-      titleBarOverlay: { color: '#f3f3f3', symbolColor: '#1b1b1b' },
     });
   });
 });

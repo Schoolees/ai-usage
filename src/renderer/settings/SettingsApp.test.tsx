@@ -74,6 +74,17 @@ describe('SettingsApp', () => {
     expect([...nav.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Providers', 'Island', 'Alerts', 'Refresh']);
   });
 
+  it('has its own close button without a tooltip', async () => {
+    const api = fakeApi();
+    await renderSettings(api);
+    const close = vi.spyOn(window, 'close').mockImplementation(() => {});
+    const button = screen.getByRole('button', { name: 'Close' });
+    expect(button.getAttribute('title')).toBeNull();
+    fireEvent.click(button);
+    expect(close).toHaveBeenCalledOnce();
+    close.mockRestore();
+  });
+
   it('picks a provider source', async () => {
     const api = fakeApi();
     await renderSettings(api);

@@ -84,7 +84,7 @@ select {
 }
 
 /* Like the Claude desktop app: no full-width title bar. The sidebar (and its divider) runs to the top
-   edge; each column's top strip is a drag area, and Windows draws the close button over the right one. */
+   edge; each column's top strip is a drag area. The close button is drawn in the page (.window-close). */
 .drag-strip {
   display: flex;
   flex: none;
@@ -115,6 +115,26 @@ select {
   gap: 2px;
   padding: 4px 10px 12px;
 }
+
+.main > .drag-strip { justify-content: flex-end; }
+
+/* Windows 11 caption button: 46×36, red on hover. No title attribute, so no tooltip. */
+.window-close {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: var(--titlebar-h);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  -webkit-app-region: no-drag;
+  transition: background-color 80ms ease;
+}
+
+.window-close:hover { background: #c42b1c; color: #ffffff; }
+.window-close:active { background: #b3271a; color: rgb(255 255 255 / 80%); }
+.window-close:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .main {
   display: flex;

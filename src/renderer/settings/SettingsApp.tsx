@@ -1,4 +1,4 @@
-import { Bell, Gauge, PanelTop, Plug, RefreshCw, TriangleAlert, type LucideIcon } from 'lucide-react';
+import { Bell, Gauge, PanelTop, Plug, RefreshCw, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode, type UIEvent } from 'react';
 import type { Api, DisplayOption, ProviderOption } from '../../shared/ipc';
 import { providerSettings, type Settings, type SettingsPatch } from '../../shared/settings-schema';
@@ -133,7 +133,11 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
       </aside>
 
       <div className="main">
-        <div className="drag-strip" aria-hidden />
+        <div className="drag-strip">
+          <button type="button" className="window-close" aria-label="Close" onClick={() => window.close()}>
+            <X size={16} strokeWidth={1.5} aria-hidden />
+          </button>
+        </div>
         <main className="content" onScroll={trackActiveSection}>
         <h1 className="page-title">Settings</h1>
 
