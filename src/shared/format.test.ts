@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { formatDuration, formatPercent, formatReset } from './format';
 
 const now = Date.UTC(2026, 8, 15, 17, 0); // Tue 15 Sep 2026, 17:00 UTC
@@ -21,6 +21,21 @@ describe('formatReset', () => {
 
   it('returns an empty string without a reset time', () => {
     expect(formatReset(null, now)).toBe('');
+  });
+
+  it('normalizes the narrow no-break space before AM/PM', () => {
+    const spy = vi.spyOn(globalThis.Intl, 'DateTimeFormat').mockImplementation(
+      class {
+        format() {
+          return 'Mon, 1:00 PM';
+        }
+      } as any
+    );
+    try {
+      expect(formatReset(Date.UTC(2026, 8, 21, 13, 0), now, 'UTC')).toBe('Resets Mon 1:00 PM');
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

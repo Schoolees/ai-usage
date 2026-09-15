@@ -13,7 +13,7 @@ export function formatReset(resetsAt: number | null, now: number, timeZone?: str
   }
   const text = new Intl.DateTimeFormat('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone })
     .format(new Date(resetsAt))
-    .replace(/ /g, ' ') // ICU puts a narrow no-break space before AM/PM
+    .replace(/ /g, ' ') // ICU puts a narrow no-break space before AM/PM
     .replace(',', '');
   return `Resets ${text}`;
 }
