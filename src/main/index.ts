@@ -14,6 +14,12 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => running?.island.show());
   // The app lives in the island and tray; closing windows must not quit it.
   app.on('window-all-closed', () => {});
+  // Backstop for every webContents (including ones created later): a dropped link or file must
+  // never navigate a window away from its own page, where it would keep window.api.
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('will-navigate', (event) => event.preventDefault());
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  });
 
   app
     .whenReady()
