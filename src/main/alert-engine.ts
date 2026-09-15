@@ -20,6 +20,9 @@ const resetKey = (providerId: string, limitId: string, resetsAt: number) => `res
 
 export class AlertEngine {
   private readonly fired: Set<string>;
+  // Threshold keys for limits with no reset time (resetsAt === null) would never be pruned, so
+  // they'd block that alert forever. Dedupe those only for this process's lifetime instead.
+  private readonly firedNoReset = new Set<string>();
 
   constructor(fired: Iterable<string> = []) {
     this.fired = new Set(fired);
@@ -51,8 +54,9 @@ export class AlertEngine {
       if (percent === null) continue;
       const crossed = [criticalPercent, warnPercent].filter((threshold) => percent >= threshold);
       if (crossed.length === 0) continue;
-      const highestIsNew = !this.fired.has(thresholdKey(next.providerId, limit, crossed[0]));
-      for (const threshold of crossed) this.fired.add(thresholdKey(next.providerId, limit, threshold));
+      const seen = limit.resetsAt === null ? this.firedNoReset : this.fired;
+      const highestIsNew = !seen.has(thresholdKey(next.providerId, limit, crossed[0]));
+      for (const threshold of crossed) seen.add(thresholdKey(next.providerId, limit, threshold));
       if (highestIsNew) {
         events.push({
           kind: 'threshold',

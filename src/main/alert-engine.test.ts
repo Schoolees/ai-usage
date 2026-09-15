@@ -49,6 +49,18 @@ describe('AlertEngine thresholds', () => {
     expect(engine.evaluate({ ...args, next: snapshot(99, periodEnd, 'error') })).toEqual([]);
     expect(engine.evaluate({ ...args, next: snapshot(null) })).toEqual([]);
   });
+
+  it('fires once per engine instance for a limit with no reset time, without persisting the key', () => {
+    const engine = new AlertEngine();
+    const events = engine.evaluate({ ...args, previous: snapshot(70, null), next: snapshot(82, null) });
+    expect(events).toHaveLength(1);
+    expect(engine.evaluate({ ...args, previous: snapshot(82, null), next: snapshot(85, null) })).toEqual([]);
+    expect(engine.firedKeys().some((key) => key.includes('|null|'))).toBe(false);
+
+    // Not persisted, so a fresh engine instance (as after a restart) fires again.
+    const restarted = new AlertEngine(engine.firedKeys());
+    expect(restarted.evaluate({ ...args, previous: snapshot(70, null), next: snapshot(82, null) })).toHaveLength(1);
+  });
 });
 
 describe('AlertEngine resets', () => {
