@@ -10,17 +10,23 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 
 **Island.** The pill hangs from the top edge of the screen: each provider's 5-hour usage, its plan, and a warning color as a limit fills up.
 
-![Island pill showing Claude 73% MAX and Codex 86% PLUS](docs/screenshots/island.png)
+<p align="center">
+  <img src="docs/screenshots/island.png" alt="Island pill showing Claude 73% MAX and Codex 86% PLUS" width="75%">
+</p>
 
 **Panel.** Hover the pill to expand it: every limit with its reset time, the source (Windows or WSL), and when the data was last updated.
 
-![Expanded panel with Claude 5-hour, weekly and per-model weekly limits, and Codex 5-hour and weekly limits](docs/screenshots/panel.png)
+<p align="center">
+  <img src="docs/screenshots/panel.png" alt="Expanded panel with Claude 5-hour, weekly and per-model weekly limits, and Codex 5-hour and weekly limits" width="75%">
+</p>
 
 **Settings.** Providers and their sources, island display, alerts and refresh, following the Windows theme, accent color and Mica.
 
-![Settings window with sidebar sections, provider switches and source dropdowns](docs/screenshots/settings.png)
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="Settings window with sidebar sections, provider switches and source dropdowns" width="75%">
+</p>
 
-<sub>Screenshots are rendered with sample data.</sub>
+<p align="center"><sub>Screenshots are rendered with sample data.</sub></p>
 
 ## Features
 
