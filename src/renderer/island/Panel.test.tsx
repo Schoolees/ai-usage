@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ProviderView } from '../../shared/view-model';
 import { Panel, footerText } from './Panel';
@@ -46,6 +46,35 @@ describe('Panel', () => {
     const row = screen.getByTestId('limit-codex-10080m');
     expect(row.textContent).toContain('Reset since last seen');
     expect(row.textContent).not.toContain('%');
+  });
+});
+
+describe('Panel refresh button', () => {
+  it('spins the refresh icon until the refresh finishes, for at least one full turn', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      let finish!: () => void;
+      const onRefresh = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+      render(<Panel view={{ providers: [claude], generatedAt: now }} now={now} {...handlers()} onRefresh={onRefresh} />);
+      const button = screen.getByRole('button', { name: 'Refresh now' });
+      const icon = () => button.querySelector('svg')!;
+
+      expect(icon().classList.contains('spin')).toBe(false);
+      fireEvent.click(button);
+      expect(icon().classList.contains('spin')).toBe(true);
+      expect(button.getAttribute('aria-busy')).toBe('true');
+
+      fireEvent.click(button); // ignored while refreshing
+      expect(onRefresh).toHaveBeenCalledOnce();
+
+      await act(async () => finish());
+      expect(icon().classList.contains('spin')).toBe(true); // keeps turning until the minimum spin time
+      await act(async () => void vi.advanceTimersByTime(700));
+      expect(icon().classList.contains('spin')).toBe(false);
+      expect(button.getAttribute('aria-busy')).toBe('false');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

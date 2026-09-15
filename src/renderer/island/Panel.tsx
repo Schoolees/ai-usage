@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ArrowUpRight, Clock, Monitor, RefreshCw, Settings, SquareTerminal } from 'lucide-react';
 import { formatDuration } from '../../shared/format';
 import type { IslandView, ProviderView } from '../../shared/view-model';
@@ -16,14 +17,43 @@ export function footerText(providers: ProviderView[], now: number): string {
 interface PanelProps {
   view: IslandView;
   now: number;
-  onRefresh(): void;
+  onRefresh(): Promise<void> | void;
   onOpenSettings(): void;
   onOpenUsage(providerId: string): void;
+  onHoverStart?(): void;
+  onHoverEnd?(): void;
+  hidden?: boolean;
 }
 
-export function Panel({ view, now, onRefresh, onOpenSettings, onOpenUsage }: PanelProps) {
+/** The refresh icon keeps turning at least this long, so a fast refresh still reads as one full spin. */
+const MIN_SPIN_MS = 700;
+
+export function Panel({ view, now, onRefresh, onOpenSettings, onOpenUsage, onHoverStart, onHoverEnd, hidden = false }: PanelProps) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    const started = Date.now();
+    try {
+      await onRefresh();
+    } finally {
+      const remaining = MIN_SPIN_MS - (Date.now() - started);
+      if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+      setRefreshing(false);
+    }
+  };
+
   return (
-    <div className="panel" role="dialog" aria-label="Plan usage limits">
+    <div
+      className="panel"
+      role="dialog"
+      aria-label="Plan usage limits"
+      aria-hidden={hidden}
+      inert={hidden}
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
+    >
       {view.providers.map((provider, index) => (
         <section key={provider.id} className="group">
           {index > 0 && <hr className="sep" />}
@@ -53,8 +83,8 @@ export function Panel({ view, now, onRefresh, onOpenSettings, onOpenUsage }: Pan
           {footerText(view.providers, now)}
         </span>
         <span className="btns">
-          <button type="button" className="icon-btn" aria-label="Refresh now" onClick={onRefresh}>
-            <RefreshCw size={14} aria-hidden />
+          <button type="button" className="icon-btn" aria-label="Refresh now" aria-busy={refreshing} onClick={() => void refresh()}>
+            <RefreshCw size={14} aria-hidden className={refreshing ? 'spin' : undefined} />
           </button>
           <button type="button" className="icon-btn" aria-label="Settings" onClick={onOpenSettings}>
             <Settings size={14} aria-hidden />

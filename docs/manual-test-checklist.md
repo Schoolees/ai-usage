@@ -9,9 +9,11 @@ Run against the installed build (`dist\AI Usage Setup <version>.exe`). Tick each
 ## Island
 - [ ] Pill sits top-center of the primary display, above other windows, no taskbar button.
 - [ ] Clicks elsewhere on the screen are not blocked by the island.
-- [ ] Click pill → panel expands; click pill → collapses.
-- [ ] Expanded, press Esc → collapses; click another app → collapses.
-- [ ] Hovering does not expand.
+- [ ] Hover the pill → panel springs open smoothly (no jump, flicker or clipped panel).
+- [ ] Move from pill into panel → stays open; move away → closes smoothly; a fast flick off the top edge also closes it.
+- [ ] Brushing past the pill quickly does not open it; clicking the pill does nothing.
+- [ ] While collapsed and while open, clicks beside/below the pill reach the app behind it.
+- [ ] Refresh button icon spins while refreshing.
 - [ ] Claude shows "Max (5x)" (or your plan), 5-hour and weekly rows, reset text, bars.
 - [ ] Codex shows plan and weekly/5-hour rows, footer "Codex from logs, … old".
 - [ ] arrow-up-right opens the provider usage page.

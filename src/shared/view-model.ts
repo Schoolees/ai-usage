@@ -18,7 +18,10 @@ export interface ProviderView {
   fromLogs: boolean;
   retryAt?: number;
   limits: LimitView[];
+  /** Highest percent across all windows; drives `level` so a nearly spent weekly limit still warns */
   maxPercent: number | null;
+  /** The pill's number: the shortest window (the 5-hour limit when there is one), so providers compare like for like */
+  headlinePercent: number | null;
   level: Level;
   /** True when the shown numbers should be dimmed/greyed: no data, expired auth, not found, or last-good is older than staleAfterMs. A transient error does not make fresh data stale. */
   stale: boolean;
@@ -48,12 +51,24 @@ export interface ProviderViewInput {
   criticalPercent: number;
 }
 
+/**
+ * Window length from the limit id: Claude's `five_hour` / `seven_day…`, Codex's `codex-<minutes>m`.
+ * Unknown windows sort last so a known 5-hour window wins the headline.
+ */
+export function windowMinutes(limit: { id: string }): number {
+  const codex = /-(\d+)m$/.exec(limit.id);
+  if (codex) return Number(codex[1]);
+  if (limit.id === 'five_hour') return 300;
+  if (limit.id.startsWith('seven_day')) return 10_080;
+  return Number.POSITIVE_INFINITY;
+}
+
 export function buildProviderView(input: ProviderViewInput): ProviderView {
   const { entry, now, warnPercent, criticalPercent } = input;
   const base = { id: input.id, name: input.name, shortName: input.shortName, fromLogs: input.fromLogs };
 
   if (!entry) {
-    return { ...base, source: null, status: 'stale', message: 'Checking…', dataAsOf: null, limits: [], maxPercent: null, level: 'normal', stale: true };
+    return { ...base, source: null, status: 'stale', message: 'Checking…', dataAsOf: null, limits: [], maxPercent: null, headlinePercent: null, level: 'normal', stale: true };
   }
 
   const { latest, lastGood } = entry;
@@ -71,12 +86,15 @@ export function buildProviderView(input: ProviderViewInput): ProviderView {
     latest.status === 'not-found'
       ? []
       : (shown?.limits ?? []).map((limit) => {
-          const usedPercent = limit.resetsAt !== null && limit.resetsAt <= now ? null : limit.usedPercent;
+          // Past its reset time with no newer record, the window has started over: nothing used yet.
+          const usedPercent = limit.resetsAt !== null && limit.resetsAt <= now ? 0 : limit.usedPercent;
           return { ...limit, usedPercent, level: levelFor(usedPercent, warnPercent, criticalPercent) };
         });
 
   const percents = limits.map((l) => l.usedPercent).filter((p): p is number => p !== null);
   const maxPercent = percents.length > 0 ? Math.max(...percents) : null;
+  const headline = [...limits].sort((a, b) => windowMinutes(a) - windowMinutes(b))[0];
+  const headlinePercent = headline?.usedPercent ?? null;
 
   return {
     ...base,
@@ -88,6 +106,7 @@ export function buildProviderView(input: ProviderViewInput): ProviderView {
     retryAt: latest.status === 'error' ? entry.nextRunAt : undefined,
     limits,
     maxPercent,
+    headlinePercent,
     level: levelFor(maxPercent, warnPercent, criticalPercent),
     stale,
   };

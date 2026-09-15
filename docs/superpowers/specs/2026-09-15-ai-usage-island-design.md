@@ -12,7 +12,7 @@ A Windows desktop app, built with Electron, that shows AI **subscription plan us
 
 - Subscription rolling-window limits for **Claude** (Claude Code login) and **ChatGPT via Codex** (Codex CLI login and logs).
 - Credentials and logs from **both** the Windows home folder and running **WSL** distros.
-- A top-center island that expands **on click only**.
+- A top-center island that expands **on hover** (changed from click-only on 2026-09-15 at the user's request).
 - Threshold alerts, start with Windows, hide in fullscreen, and a choice of display.
 
 ### Out of scope (v1)
@@ -59,9 +59,9 @@ A Codex `rate_limits` record, as observed on this machine:
 ### Island window
 
 - One borderless, transparent, always-on-top window with no taskbar entry, placed top-center on the chosen display's work area.
-- **Collapsed:** the window is sized to the pill only (about 260×32 px), so the rest of the screen stays clickable.
-- **Expand:** a click on the pill resizes the window with `setBounds` to fit the panel, and the drop-down animation is done in CSS.
-- **Collapse:** clicking the pill again, pressing Esc, or the window losing focus. Hover does **not** expand it.
+- **Window size:** fixed to fit pill + panel, so hovering never resizes it (resizing a transparent window mid-animation caused visible jumps). Everything outside the pill and the open panel is click-through (`setIgnoreMouseEvents(true, { forward: true })`), so the rest of the screen stays clickable.
+- **Expand:** resting the pointer on the pill for 90 ms expands it. The pill grows and the panel springs down with CSS transitions (transform/opacity only).
+- **Collapse:** 280 ms after the pointer leaves the pill and panel (enough time to cross between them), or at once when the main process sees the cursor outside the window. An expand requested by a notification click closes after 5 s if the pointer never arrives. The window never takes focus.
 
 ### Pill
 
@@ -91,7 +91,7 @@ A Codex `rate_limits` record, as observed on this machine:
 
 Show/Hide island · Refresh now · Settings… · Start with Windows (checkbox) · Quit.
 
-### Settings window (a normal, framed window)
+### Settings window (dark custom title bar, sidebar sections; styled after the Claude desktop app's settings)
 
 - Enable or disable each provider, and pick its source (Windows or a detected WSL distro).
 - Island display.

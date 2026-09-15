@@ -1,7 +1,8 @@
-import { app, ipcMain, powerMonitor, screen, shell } from 'electron';
+import { app, ipcMain, nativeTheme, powerMonitor, screen, shell, systemPreferences } from 'electron';
 import { join } from 'node:path';
 import { IPC, type DisplayOption, type ProviderOption } from '../shared/ipc';
 import { mergeSettings, providerSettings, type Settings, type SettingsPatch } from '../shared/settings-schema';
+import { DEFAULT_THEME, type SystemTheme } from '../shared/theme';
 import { MINUTE } from '../shared/time';
 import type { DetectedSource, Snapshot } from '../shared/types';
 import { buildProviderView, type IslandView } from '../shared/view-model';
@@ -16,7 +17,8 @@ import { createRunningDistroCache, defaultDetectDeps, distroFromHome, listCandid
 import { loadState, saveState } from './state-file';
 import { UsageStore } from './usage-store';
 import trayIcon from '../../resources/tray.ico?asset';
-import { openSettingsWindow } from './settings-window';
+import { openSettingsWindow, updateSettingsWindowTheme } from './settings-window';
+import { defaultThemeDeps, readSystemTheme } from './system-theme';
 import { createTray } from './tray';
 import { AlertEngine } from './alert-engine';
 import { alertText } from './alert-text';
@@ -46,6 +48,17 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
 
   const islandDisplay = () => pickDisplay(listDisplays(), settings.displayId);
   const island = new IslandWindow(islandDisplay);
+
+  // Windows Personalization > Colors (mode, accent, transparency), pushed to both windows on change.
+  let theme: SystemTheme = DEFAULT_THEME;
+  const themeDeps = defaultThemeDeps(() => nativeTheme.shouldUseDarkColors);
+  const refreshTheme = async () => {
+    const next = await readSystemTheme(themeDeps).catch(() => theme);
+    if (JSON.stringify(next) === JSON.stringify(theme)) return;
+    theme = next;
+    if (!island.win.isDestroyed()) island.win.webContents.send(IPC.themeUpdate, theme);
+    updateSettingsWindowTheme(theme);
+  };
 
   async function detectAll(): Promise<void> {
     const candidates = await listCandidateHomes(defaultDetectDeps());
@@ -174,6 +187,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   ipcMain.handle(IPC.refresh, (_event, olderThanMs?: number) => scheduler.refreshNow({ olderThanMs }));
   ipcMain.on(IPC.islandResize, (_event, width: number, height: number) => island.resize(width, height));
   ipcMain.on(IPC.islandSetExpanded, (_event, expanded: boolean) => island.setExpanded(expanded));
+  ipcMain.on(IPC.islandSetInteractive, (_event, interactive: boolean) => island.setInteractive(interactive === true));
   ipcMain.on(IPC.openUsagePage, (_event, providerId: string) => {
     const url = plugins.find((plugin) => plugin.id === providerId)?.usageUrl;
     if (url) void shell.openExternal(url);
@@ -189,13 +203,14 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     }));
   });
   ipcMain.handle(IPC.displaysGet, (): DisplayOption[] => listDisplays().map(({ id, label, primary }) => ({ id, label, primary })));
-  ipcMain.on(IPC.openSettings, () => openSettingsWindow());
+  ipcMain.handle(IPC.themeGet, () => theme);
+  ipcMain.on(IPC.openSettings, () => openSettingsWindow(theme));
 
   const trayHandle = createTray(trayIcon, {
     toggleIsland: () => island.toggleUserHidden(),
     isIslandVisible: () => island.isUserVisible(),
     refresh: () => void scheduler.refreshNow(),
-    openSettings: () => openSettingsWindow(),
+    openSettings: () => openSettingsWindow(theme),
     getOpenAtLogin: () => settings.openAtLogin,
     setOpenAtLogin: (value) => {
       applySettings(mergeSettings(settings, { openAtLogin: value }));
@@ -214,6 +229,12 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     clearTimeout(saveTimer);
     writeState();
   });
+
+  void refreshTheme();
+  nativeTheme.on('updated', () => void refreshTheme());
+  systemPreferences.on('accent-color-changed', () => void refreshTheme());
+  // Transparency toggles don't always raise an event; re-check occasionally.
+  setInterval(() => void refreshTheme(), 30_000);
 
   screen.on('display-added', () => island.reposition());
   screen.on('display-removed', () => island.reposition());

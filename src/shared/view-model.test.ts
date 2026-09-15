@@ -42,7 +42,7 @@ describe('levelFor', () => {
 describe('buildProviderView', () => {
   it('shows fresh ok data with levels and the highest percent', () => {
     const view = buildProviderView(input({ latest: okSnapshot(now - 60_000, 86) }));
-    expect(view).toMatchObject({ status: 'ok', plan: 'Max (5x)', source, maxPercent: 86, level: 'warn', dataAsOf: now - 60_000, stale: false });
+    expect(view).toMatchObject({ status: 'ok', plan: 'Max (5x)', source, maxPercent: 86, headlinePercent: 86, level: 'warn', dataAsOf: now - 60_000, stale: false });
     expect(view.limits.map((l) => l.level)).toEqual(['warn', 'normal']);
   });
 
@@ -80,15 +80,38 @@ describe('buildProviderView', () => {
   it('shows no limits when the provider is not found', () => {
     const missing: Snapshot = { providerId: 'claude', source: null, status: 'not-found', dataAsOf: now, limits: [], message: 'No login' };
     const view = buildProviderView(input({ latest: missing, lastGood: okSnapshot(now - 1) }));
-    expect(view).toMatchObject({ status: 'not-found', limits: [], maxPercent: null, message: 'No login', stale: true });
+    expect(view).toMatchObject({ status: 'not-found', limits: [], maxPercent: null, headlinePercent: null, message: 'No login', stale: true });
   });
 
-  it('hides the percent of a window whose reset has passed', () => {
+  it('counts a window that reset since the data was recorded as a fresh 0% window', () => {
     const snapshot = okSnapshot(now - 60_000);
     snapshot.limits[0] = { ...snapshot.limits[0], usedPercent: 97, resetsAt: now - 1 };
     const view = buildProviderView(input({ latest: snapshot }));
-    expect(view.limits[0].usedPercent).toBeNull();
+    expect(view.limits[0]).toMatchObject({ usedPercent: 0, level: 'normal' });
     expect(view.maxPercent).toBe(29);
+    expect(view.headlinePercent).toBe(0);
+  });
+
+  it('headlines the shortest window (5-hour) even when a longer window is higher, but levels by the worst', () => {
+    const snapshot = okSnapshot(now - 60_000, 20);
+    snapshot.limits[1] = { ...snapshot.limits[1], usedPercent: 90 };
+    const view = buildProviderView(input({ latest: snapshot }));
+    expect(view).toMatchObject({ headlinePercent: 20, maxPercent: 90, level: 'warn' });
+  });
+
+  it('headlines the Codex 5-hour window by its window size, even when listed after the weekly window', () => {
+    const codex: Snapshot = {
+      providerId: 'codex',
+      source,
+      status: 'ok',
+      dataAsOf: now - 60_000,
+      limits: [
+        { id: 'codex-10080m', label: 'Weekly limit', usedPercent: 16, resetsAt: now + 6 * 86_400_000 },
+        { id: 'codex-300m', label: '5-hour limit', usedPercent: null, resetsAt: now - 20 * 60_000 },
+      ],
+    };
+    const view = buildProviderView(input({ latest: codex }, { id: 'codex', staleAfterMs: 86_400_000, fromLogs: true }));
+    expect(view).toMatchObject({ headlinePercent: 0, maxPercent: 16 });
   });
 
   it('reports a checking state before the first fetch', () => {
@@ -97,6 +120,7 @@ describe('buildProviderView', () => {
       message: 'Checking…',
       limits: [],
       maxPercent: null,
+      headlinePercent: null,
       dataAsOf: null,
       stale: true,
     });

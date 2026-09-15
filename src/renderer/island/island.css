@@ -1,10 +1,55 @@
+@import '../palette.css';
+
 :root {
   color-scheme: dark;
   font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
   font-size: 12px;
-  --warn: #f5b041;
-  --critical: #ff6b6b;
-  --bar: #2f7de1;
+  --warn: var(--warning);
+  --critical: var(--danger);
+  --bar: var(--primary);
+  /* Surfaces follow Windows personalization: dark/light mode and transparency effects (see theme.ts). */
+  --island-pill: #1c1c1c;
+  --island-panel: #272727;
+  --island-border: rgb(255 255 255 / 9%);
+  --island-sep: rgb(255 255 255 / 8%);
+  --island-text: #ffffff;
+  --island-text-2: #c8c8c8;
+  --island-text-3: #9d9d9d;
+  --island-track: #3d3d3d;
+  --island-hover: rgb(255 255 255 / 7%);
+  --badge-bg: rgb(255 255 255 / 10%);
+  --badge-text: #a3a3a3;
+  --pill-shadow: 0 2px 8px rgb(0 0 0 / 30%);
+  --pill-shadow-open: 0 6px 16px rgb(0 0 0 / 45%);
+  --panel-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px -4px rgb(0 0 0 / 45%), 0 18px 40px -12px rgb(0 0 0 / 35%);
+}
+
+:root[data-transparency='on'] {
+  --island-pill: rgb(28 28 28 / 90%);
+  --island-panel: rgb(39 39 39 / 86%);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --island-pill: #f3f3f3;
+  --island-panel: #fbfbfb;
+  --island-border: rgb(0 0 0 / 8%);
+  --island-sep: rgb(0 0 0 / 8%);
+  --island-text: #1b1b1b;
+  --island-text-2: #3f3f3f;
+  --island-text-3: #6b6b6b;
+  --island-track: #e1e1e1;
+  --island-hover: rgb(0 0 0 / 5%);
+  --badge-bg: rgb(0 0 0 / 7%);
+  --badge-text: #5c5c5c;
+  --pill-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  --pill-shadow-open: 0 6px 16px rgb(0 0 0 / 16%);
+  --panel-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 8px 24px -4px rgb(0 0 0 / 16%), 0 18px 40px -12px rgb(0 0 0 / 12%);
+}
+
+:root[data-theme='light'][data-transparency='on'] {
+  --island-pill: rgb(243 243 243 / 92%);
+  --island-panel: rgb(251 251 251 / 88%);
 }
 
 html,
@@ -16,15 +61,15 @@ body {
 }
 
 .island {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 0; /* collapsed: no transparent padding around the pill, so it doesn't eat clicks */
-}
-
-.island.expanded {
-  padding: 0 14px 18px; /* room for the panel shadow inside the transparent window */
+  /* Constant in both states: the window is sized once and never resizes on hover. Transparent areas
+     are click-through (setIgnoreMouseEvents), so this padding doesn't block the screen behind it. */
+  padding: 0 32px 48px; /* must cover the panel shadow's full blur, or the window edge clips it square */
 }
 
 button {
@@ -40,14 +85,23 @@ button {
   padding: 5px 14px 6px;
   border: 0;
   border-radius: 0 0 14px 14px;
-  background: #0b0b0b;
-  color: #eee;
-  box-shadow: none; /* collapsed: no shadow, so it isn't clipped by the tight transparent window */
+  border: 1px solid var(--island-border);
+  border-top: 0;
+  background: var(--island-pill);
+  color: var(--island-text);
+  box-shadow: var(--pill-shadow);
   white-space: nowrap;
+  cursor: default;
+  transform-origin: top center;
+  transition:
+    transform 260ms var(--ease-spring),
+    box-shadow 260ms var(--ease-out);
 }
 
+/* Grow with transform only: a layout change here would resize the window and bring back the jump. */
 .island.expanded .pill {
-  box-shadow: 0 4px 12px rgb(0 0 0 / 40%);
+  transform: scale(1.06);
+  box-shadow: var(--pill-shadow-open);
 }
 
 .pill-seg {
@@ -55,6 +109,22 @@ button {
   align-items: center;
   gap: 5px;
 }
+
+/* Plan tier tag after the percent: MAX / PRO. Quiet monospace chip on a neutral fill. */
+.plan-badge {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 13px;
+  letter-spacing: 0.08em;
+}
+
+.state-stale .plan-badge,
+.state-no-data .plan-badge { opacity: 0.7; }
 
 .dot {
   width: 7px;
@@ -65,26 +135,87 @@ button {
 .state-warn { color: var(--warn); }
 .state-critical { color: var(--critical); }
 .state-stale,
-.state-no-data { color: #777; }
+.state-no-data { color: var(--secondary); }
 
 .panel {
   width: 360px;
   box-sizing: border-box;
   padding: 12px 14px 10px;
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--island-border);
   border-radius: 12px;
-  background: #1f1f1f;
-  color: #9a9a9a;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 50%);
-  animation: drop 140ms ease-out;
+  background: var(--island-panel);
+  color: var(--island-text-2);
+  box-shadow: var(--panel-shadow);
+  transform-origin: top center;
+  /* Collapsed: stays mounted (so the window size never changes) but invisible and inert. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-14px) scale(0.92);
+  filter: blur(2px);
+  transition:
+    opacity 160ms ease-in,
+    transform 200ms var(--ease-out),
+    filter 160ms ease-in,
+    visibility 0s linear 200ms;
+  will-change: transform, opacity;
 }
 
-@keyframes drop {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+.island.expanded .panel {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  filter: none;
+  transition:
+    opacity 180ms ease-out,
+    transform 380ms var(--ease-spring),
+    filter 180ms ease-out,
+    visibility 0s;
 }
 
-.sep { border: 0; border-top: 1px solid #333; margin: 10px 0; }
+/* Rows cascade in slightly after the panel opens. */
+.panel .group,
+.panel .foot {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease-in, transform 120ms ease-in;
+}
+
+.island.expanded .panel .group,
+.island.expanded .panel .foot {
+  opacity: 1;
+  transform: none;
+  transition: opacity 240ms ease-out, transform 300ms var(--ease-out);
+}
+
+.island.expanded .panel .group:nth-child(1) { transition-delay: 60ms; }
+.island.expanded .panel .group:nth-child(2) { transition-delay: 110ms; }
+.island.expanded .panel .group:nth-child(3) { transition-delay: 160ms; }
+.island.expanded .panel .foot { transition-delay: 160ms; }
+
+.spin {
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill,
+  .panel,
+  .panel .group,
+  .panel .foot {
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+  }
+  .spin {
+    animation-duration: 1.4s;
+  }
+}
+
+.sep { border: 0; border-top: 1px solid var(--island-sep); margin: 10px 0; }
 
 .group-head {
   display: flex;
@@ -117,24 +248,24 @@ button {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #aaa;
+  color: var(--island-text-3);
 }
 
-.icon-btn:hover { background: #2c2c2c; color: #fff; }
+.icon-btn:hover { background: var(--island-hover); color: var(--island-text); }
 
-.status { margin: 4px 0 6px; color: #bbb; }
+.status { margin: 4px 0 6px; color: var(--island-text-2); }
 .status-error,
 .status-auth-expired { color: var(--warn); }
 
-.link { border: 0; background: none; padding: 0; color: #6ea8fe; text-decoration: underline; }
+.link { border: 0; background: none; padding: 0; color: var(--info); text-decoration: underline; }
 
 .row { margin: 9px 0; }
 .row.dim { opacity: 0.55; }
 .row-top { display: flex; justify-content: space-between; gap: 8px; }
-.row-top b { color: #eee; font-weight: 600; }
+.row-top b { color: var(--island-text); font-weight: 600; }
 .pct { margin-left: 8px; }
 
-.bar { height: 5px; margin-top: 4px; border-radius: 3px; background: #333; }
+.bar { height: 5px; margin-top: 4px; border-radius: 3px; background: var(--island-track); }
 .fill { display: block; height: 100%; border-radius: 3px; background: var(--bar); transition: width 300ms ease; }
 .fill.level-warn { background: var(--warn); }
 .fill.level-critical { background: var(--critical); }
@@ -144,7 +275,7 @@ button {
   justify-content: space-between;
   align-items: center;
   margin-top: 8px;
-  color: #666;
+  color: var(--island-text-3);
   font-size: 11px;
 }
 

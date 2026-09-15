@@ -31,3 +31,9 @@ export function formatPercent(percent: number): string {
   // show a threshold number (e.g. 80%) the color hasn't actually reached yet.
   return `${Math.floor(percent)}%`;
 }
+
+/** Short plan tag for the pill: "Max (5x)" → "MAX", "Pro Lite" → "PRO LITE". */
+export function planBadge(plan: string | undefined): string | null {
+  const name = plan?.replace(/\(.*?\)/g, '').trim();
+  return name ? name.toUpperCase() : null;
+}

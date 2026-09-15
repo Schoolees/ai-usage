@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { formatDuration, formatPercent, formatReset } from './format';
+import { formatDuration, formatPercent, formatReset, planBadge } from './format';
 
 const now = Date.UTC(2026, 8, 15, 17, 0); // Tue 15 Sep 2026, 17:00 UTC
 
@@ -48,6 +48,24 @@ describe('formatDuration', () => {
     [4 * 86_400_000, '4 days'],
   ])('%i ms → %s', (ms, text) => {
     expect(formatDuration(ms)).toBe(text);
+  });
+});
+
+describe('planBadge', () => {
+  it.each([
+    ['Max (5x)', 'MAX'],
+    ['Max (20x)', 'MAX'],
+    ['Pro', 'PRO'],
+    ['Plus', 'PLUS'],
+    ['Pro Lite', 'PRO LITE'],
+    ['Team', 'TEAM'],
+  ])('%s → %s', (plan, badge) => {
+    expect(planBadge(plan)).toBe(badge);
+  });
+
+  it('returns null without a plan', () => {
+    expect(planBadge(undefined)).toBeNull();
+    expect(planBadge('  ')).toBeNull();
   });
 });
 

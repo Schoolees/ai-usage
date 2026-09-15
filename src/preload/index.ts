@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { IPC, type Api } from '../shared/ipc';
+import type { SystemTheme } from '../shared/theme';
 import type { IslandView } from '../shared/view-model';
 
 function subscribe<T extends unknown[]>(channel: string, listener: (...args: T) => void): () => void {
@@ -14,6 +15,7 @@ const api: Api = {
   refresh: (olderThanMs) => ipcRenderer.invoke(IPC.refresh, olderThanMs),
   resizeIsland: (width, height) => ipcRenderer.send(IPC.islandResize, width, height),
   setExpanded: (expanded) => ipcRenderer.send(IPC.islandSetExpanded, expanded),
+  setInteractive: (interactive) => ipcRenderer.send(IPC.islandSetInteractive, interactive),
   onCollapse: (listener) => subscribe(IPC.islandCollapse, listener),
   onExpand: (listener) => subscribe(IPC.islandExpand, listener),
   openUsagePage: (providerId) => ipcRenderer.send(IPC.openUsagePage, providerId),
@@ -22,6 +24,8 @@ const api: Api = {
   setSettings: (patch) => ipcRenderer.invoke(IPC.settingsSet, patch),
   getProviders: () => ipcRenderer.invoke(IPC.providersGet),
   getDisplays: () => ipcRenderer.invoke(IPC.displaysGet),
+  getTheme: () => ipcRenderer.invoke(IPC.themeGet),
+  onTheme: (listener) => subscribe<[SystemTheme]>(IPC.themeUpdate, listener),
 };
 
 contextBridge.exposeInMainWorld('api', api);

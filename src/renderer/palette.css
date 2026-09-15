@@ -1,0 +1,20 @@
+/* App color palette, shared by the island and the settings window. Dark values by default, light values
+   when Windows is in light mode. --primary is replaced at runtime by the Windows accent color (theme.ts). */
+:root {
+  --primary: #2f67e1;
+  --secondary: #6b7785;
+  --success: #1f8254;
+  --info: #3d99f5;
+  --warning: #eead20;
+  --danger: #d43d4c;
+  --on-primary: #ffffff;
+}
+
+:root[data-theme='light'] {
+  --primary: #2563eb;
+  --secondary: #6b7785;
+  --success: #198754;
+  --info: #3399ff;
+  --warning: #f9b115;
+  --danger: #dc3545;
+}

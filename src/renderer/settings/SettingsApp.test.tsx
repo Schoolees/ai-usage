@@ -12,6 +12,7 @@ function fakeApi(setSettings: Api['setSettings'] = async (patch: SettingsPatch) 
     refresh: vi.fn(),
     resizeIsland: vi.fn(),
     setExpanded: vi.fn(),
+    setInteractive: vi.fn(),
     onCollapse: vi.fn(),
     onExpand: vi.fn(),
     openUsagePage: vi.fn(),
@@ -26,6 +27,8 @@ function fakeApi(setSettings: Api['setSettings'] = async (patch: SettingsPatch) 
       { id: 1, label: 'Display 1', primary: true },
       { id: 2, label: 'Display 2', primary: false },
     ]),
+    getTheme: vi.fn(),
+    onTheme: vi.fn(),
   } satisfies Api;
 }
 
@@ -47,11 +50,36 @@ describe('SettingsApp', () => {
     });
   });
 
+  it('renders on/off options as switches that reflect the saved value', async () => {
+    const api = fakeApi();
+    await renderSettings(api);
+
+    const codex = screen.getByRole('switch', { name: 'ChatGPT (Codex)' });
+    expect(codex.getAttribute('aria-checked')).toBe('true');
+    await act(async () => {
+      fireEvent.click(codex);
+    });
+    expect(screen.getByRole('switch', { name: 'ChatGPT (Codex)' }).getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('switch', { name: 'Start with Windows' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('switch', { name: 'Show notifications' })).toBeTruthy();
+  });
+
+  it('shows the unit next to number fields and a sidebar entry per section', async () => {
+    const api = fakeApi();
+    await renderSettings(api);
+
+    expect(screen.getByLabelText('Warning at').parentElement?.textContent).toContain('%');
+    expect(screen.getByLabelText('Check Claude every').parentElement?.textContent).toContain('min');
+    const nav = screen.getByRole('navigation', { name: 'Settings sections' });
+    expect([...nav.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Providers', 'Island', 'Alerts', 'Refresh']);
+  });
+
   it('picks a provider source', async () => {
     const api = fakeApi();
     await renderSettings(api);
 
-    fireEvent.change(screen.getByLabelText('Claude source'), { target: { value: '\\\\wsl.localhost\\Ubuntu\\home\\me' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Claude source' }));
+    fireEvent.click(screen.getByRole('option', { name: /WSL · Ubuntu/ }));
     expect(api.setSettings).toHaveBeenLastCalledWith({
       providers: { ...DEFAULT_SETTINGS.providers, claude: { enabled: true, sourceHome: '\\\\wsl.localhost\\Ubuntu\\home\\me' } },
     });
@@ -62,8 +90,9 @@ describe('SettingsApp', () => {
     const api = fakeApi();
     await renderSettings(api);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Display' }));
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Display'), { target: { value: '2' } });
+      fireEvent.click(screen.getByRole('option', { name: /Display 2/ }));
     });
     expect(api.setSettings).toHaveBeenLastCalledWith({ displayId: 2 });
 
@@ -72,7 +101,7 @@ describe('SettingsApp', () => {
     });
     expect(api.setSettings).toHaveBeenLastCalledWith({ hideInFullscreen: false });
 
-    const minutes = screen.getByLabelText('Check Claude every (minutes)');
+    const minutes = screen.getByLabelText('Check Claude every');
     fireEvent.change(minutes, { target: { value: '5' } });
     await act(async () => {
       fireEvent.blur(minutes);
@@ -85,7 +114,7 @@ describe('SettingsApp', () => {
       throw new Error('Warning threshold must be below the critical threshold');
     });
     await renderSettings(api);
-    const warn = screen.getByLabelText('Warning at (%)');
+    const warn = screen.getByLabelText('Warning at');
     fireEvent.change(warn, { target: { value: '99' } });
     await act(async () => {
       fireEvent.blur(warn);
@@ -100,7 +129,7 @@ describe('SettingsApp', () => {
       );
     });
     await renderSettings(api);
-    const warn = screen.getByLabelText('Warning at (%)');
+    const warn = screen.getByLabelText('Warning at');
     fireEvent.change(warn, { target: { value: '99' } });
     await act(async () => {
       fireEvent.blur(warn);
