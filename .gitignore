@@ -1,0 +1,12 @@
+# dependencies & build output
+node_modules/
+out/
+dist/
+
+# local tooling
+.superpowers/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+*.log
