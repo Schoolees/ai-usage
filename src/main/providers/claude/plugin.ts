@@ -17,7 +17,8 @@ export interface HttpResponse {
 
 export type HttpGet = (url: string, headers: Record<string, string>) => Promise<HttpResponse>;
 
-const defaultHttpGet: HttpGet = (url, headers) => fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+const defaultHttpGet: HttpGet = (url, headers) =>
+  fetch(url, { headers, signal: AbortSignal.timeout(15_000), redirect: 'error' });
 
 export function parseRetryAfter(value: string | null, now: number): number | undefined {
   if (!value) return undefined;
