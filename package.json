@@ -1,0 +1,43 @@
+{
+  "name": "ai-usage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Notch-style island showing AI subscription plan usage limits",
+  "author": "rpbaguio",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "icons": "node scripts/make-icons.mjs",
+    "dist": "electron-vite build && electron-builder --win"
+  },
+  "dependencies": {
+    "electron-log": "5.4.4",
+    "koffi": "3.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "24.13.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "44.3.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "jsdom": "30.0.1",
+    "lucide-react": "1.46.0",
+    "png-to-ico": "3.0.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "sharp": "0.35.4",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "5.0.0"
+  }
+}

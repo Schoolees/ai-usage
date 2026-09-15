@@ -1,0 +1,7 @@
+export const MINUTE = 60_000;
+export const HOUR = 60 * MINUTE;
+export const DAY = 24 * HOUR;
+
+export function roundToMinute(ms: number): number {
+  return Math.round(ms / MINUTE) * MINUTE;
+}
