@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../../shared/settings-schema';
 import type { Source } from '../../../shared/types';
+import { credentialsPath } from './credentials';
 import { CLAUDE_USAGE_URL, createClaudePlugin, parseRetryAfter, type HttpGet } from './plugin';
 
 const now = Date.UTC(2026, 8, 15, 17, 0);
@@ -34,8 +35,10 @@ describe('createClaudePlugin', () => {
 
   it('detects homes that have a credentials file', async () => {
     const plugin = createClaudePlugin({
+      // Compare against the path the plugin actually builds: join() uses backslashes on Windows,
+      // so matching a POSIX prefix here passes on Linux and fails in CI.
       statMtimeMs: async (path) => {
-        if (path.startsWith('/home/me')) return 1234;
+        if (path === credentialsPath(source.home)) return 1234;
         throw new Error('ENOENT');
       },
     });
