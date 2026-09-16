@@ -8,9 +8,26 @@ Signing happens in `.github/workflows/release.yml`, not on a developer machine: 
 certificate may only sign artifacts that SignPath can trace back to a build it trusts, which here
 means a GitHub Actions run in this repository.
 
+## Status
+
+**Not signed yet.** The workflow is in place and green, but no certificate has been issued, so
+releases still go out unsigned and SmartScreen still warns. Everything that is left is in
+[Setting it up](#setting-it-up) and has to be done by the project owner — the application is the
+long pole, and approval takes days to weeks.
+
+| | Step |
+|---|---|
+| [x] | Release workflow builds, signs, verifies and publishes |
+| [x] | `scripts/update-signed-metadata.mjs` keeps auto-update working across signing |
+| [ ] | Apply to SignPath Foundation |
+| [ ] | Create the project, signing policy and artifact configuration |
+| [ ] | Register this repository as a trusted build system |
+| [ ] | Add `SIGNPATH_API_TOKEN` and the `SIGNPATH_*` variables |
+| [ ] | Ship a signed release and drop the "unsigned" notes from the README |
+
 ## What the release workflow does
 
-1. Builds the installer on `windows-latest` (`npx electron-builder --win --publish never`).
+1. Builds the installer on `windows-latest` (`npm run build`, then `electron-builder --win --publish never`).
 2. Uploads it as a build artifact and hands that artifact to SignPath.
 3. Copies the signed installer back over `dist/`.
 4. Runs `scripts/update-signed-metadata.mjs`, which rebuilds `latest.yml` and the `.blockmap`.
@@ -26,6 +43,8 @@ Without the SignPath secrets the workflow still builds and publishes; it just sk
 tagging a release keeps working while the application is in progress.
 
 ## Setting it up
+
+Tick the boxes in [Status](#status) as these are done.
 
 1. **Apply.** Fill in the form on [signpath.org](https://signpath.org/) and email it in. The project
    has to be actively maintained, already released, under an OSI-approved licence with no
