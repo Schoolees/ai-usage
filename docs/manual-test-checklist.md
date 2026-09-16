@@ -49,7 +49,8 @@ Run against the installed build (`dist\AI Usage Setup <version>.exe`). Tick each
 ## Updates
 Install an older version, then publish/point at a newer one.
 - [ ] Tray shows "Downloading update X…", then "Restart to update to X"; clicking it restarts into the new version.
-- [ ] Quitting from the tray with an update ready installs it and the app comes back by itself, at the new version.
+- [ ] Restarting or quitting with an update ready shows the "AI Usage Setup" progress window, then the app comes back by itself at the new version.
+- [ ] After that restart an "AI Usage updated to X" notification appears, once; restarting again does not repeat it.
 - [ ] After that update the Start Menu entry still exists — delete `%APPDATA%\Microsoft\Windows\Start Menu\Programs\AI Usage.lnk`, update again, and it is recreated.
 - [ ] Apps & features lists exactly one "AI Usage" entry, at the installed version.
 - [ ] Settings → Updates → off: the tray reads "Updates are turned off" and no check happens.

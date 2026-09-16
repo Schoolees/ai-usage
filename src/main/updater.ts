@@ -69,11 +69,15 @@ export function createUpdater({ log, enabled, onStatus, onReadyNotification }: U
   // disappears when you quit it. We install from the quit path ourselves to bring it back.
   autoUpdater.autoInstallOnAppQuit = false;
 
-  /** isSilent, isForceRunAfter: no installer window, and the app comes back in the new version. */
+  /**
+   * Not silent: the installer shows its own progress window. Silently, the island just vanished for
+   * the length of the install with nothing on screen, which read as the update having hung.
+   * isForceRunAfter brings the app back in the new version.
+   */
   const quitAndInstall = () => {
     installing = true;
     log.info(`updates: installing ${status.version ?? ''} and restarting`);
-    autoUpdater.quitAndInstall(true, true);
+    autoUpdater.quitAndInstall(false, true);
   };
 
   autoUpdater.on('checking-for-update', () => set({ state: 'checking', version: null }));
@@ -135,6 +139,12 @@ export function createUpdater({ log, enabled, onStatus, onReadyNotification }: U
     },
     stop,
   };
+}
+
+/** Confirms, after the restart, that the update actually happened. */
+export function notifyUpdated(version: string): void {
+  if (!Notification.isSupported()) return;
+  new Notification({ title: `AI Usage updated to ${version}`, body: 'You are on the latest version.' }).show();
 }
 
 export function notifyUpdateReady(version: string, install: () => void): void {

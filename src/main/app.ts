@@ -1,4 +1,5 @@
 import { app, ipcMain, nativeTheme, powerMonitor, screen, shell, systemPreferences } from 'electron';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { IPC, type DisplayOption, type ProviderOption } from '../shared/ipc';
 import { mergeSettings, providerSettings, type Settings, type SettingsPatch } from '../shared/settings-schema';
@@ -21,7 +22,8 @@ import { openSettingsWindow, updateSettingsWindowTheme } from './settings-window
 import { defaultThemeDeps, readSystemTheme } from './system-theme';
 import { createTray } from './tray';
 import { hasLoginCommand, startLogin } from './switch-account';
-import { createUpdater, notifyUpdateReady } from './updater';
+import { justUpdated } from './update-state';
+import { createUpdater, notifyUpdated, notifyUpdateReady } from './updater';
 import { AlertEngine } from './alert-engine';
 import { alertText } from './alert-text';
 import { showAlert } from './notifier';
@@ -46,6 +48,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   const stateFile = join(userData, 'state.json');
 
   let settings: Settings = loadSettings(settingsFile);
+  const stateFileExisted = existsSync(stateFile);
   const persisted = loadState(stateFile);
   const store = new UsageStore(persisted.lastGood);
   const alerts = new AlertEngine(persisted.alertsFired);
@@ -113,7 +116,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
 
   function writeState(): void {
     try {
-      saveState(stateFile, { lastGood: store.lastGoodMap(), alertsFired: alerts.firedKeys() });
+      saveState(stateFile, { lastGood: store.lastGoodMap(), alertsFired: alerts.firedKeys(), lastVersion: app.getVersion() });
     } catch (error) {
       log.warn('could not save state', error);
     }
@@ -285,6 +288,16 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     // otherwise the app would silently vanish until the user launches it again.
     if (updater.installOnQuit()) event.preventDefault();
   });
+
+  // Versions before 0.1.8 did not record themselves, but a state file means the app has run before.
+  const previousVersion = persisted.lastVersion ?? (stateFileExisted ? 'an earlier version' : null);
+  if (justUpdated(previousVersion, app.getVersion())) {
+    log.info(`updates: now running ${app.getVersion()} (was ${previousVersion})`);
+    notifyUpdated(app.getVersion());
+  }
+  // Record this version now, so the confirmation shows once rather than on every launch until the
+  // next debounced save.
+  writeState();
 
   void refreshTheme();
   nativeTheme.on('updated', () => void refreshTheme());

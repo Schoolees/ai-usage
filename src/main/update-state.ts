@@ -13,6 +13,14 @@ export interface UpdateMenuItem {
   action: 'check' | 'install' | 'none';
 }
 
+/**
+ * Whether this launch is the first on a new version. Any change counts: the updater never
+ * downgrades, and a manual reinstall of another version is worth confirming too.
+ */
+export function justUpdated(lastVersion: string | null, currentVersion: string): boolean {
+  return lastVersion !== null && lastVersion !== currentVersion;
+}
+
 /** The tray's update line: what it says, and what clicking it does. */
 export function updateMenuItem(status: UpdateStatus): UpdateMenuItem {
   switch (status.state) {

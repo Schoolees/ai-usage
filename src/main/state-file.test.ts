@@ -27,21 +27,22 @@ const snapshot: Snapshot = {
 describe('state file', () => {
   it('returns an empty state when missing or corrupt', () => {
     const file = join(dir, 'state.json');
-    expect(loadState(file)).toEqual({ lastGood: {}, alertsFired: [] });
+    expect(loadState(file)).toEqual({ lastGood: {}, alertsFired: [], lastVersion: null });
     writeFileSync(file, 'garbage');
-    expect(loadState(file)).toEqual({ lastGood: {}, alertsFired: [] });
+    expect(loadState(file)).toEqual({ lastGood: {}, alertsFired: [], lastVersion: null });
   });
 
   it('round-trips snapshots and fired alert keys', () => {
     const file = join(dir, 'state.json');
-    saveState(file, { lastGood: { claude: snapshot }, alertsFired: ['threshold|claude|five_hour|2|80'] });
-    expect(loadState(file)).toEqual({ lastGood: { claude: snapshot }, alertsFired: ['threshold|claude|five_hour|2|80'] });
+    const state = { lastGood: { claude: snapshot }, alertsFired: ['threshold|claude|five_hour|2|80'], lastVersion: '0.1.7' };
+    saveState(file, state);
+    expect(loadState(file)).toEqual(state);
     expect(readFileSync(file, 'utf8')).not.toMatch(/token/i);
   });
 
   it('drops malformed fields', () => {
     const file = join(dir, 'state.json');
-    writeFileSync(file, JSON.stringify({ lastGood: 'x', alertsFired: ['ok', 3] }));
-    expect(loadState(file)).toEqual({ lastGood: {}, alertsFired: ['ok'] });
+    writeFileSync(file, JSON.stringify({ lastGood: 'x', alertsFired: ['ok', 3], lastVersion: 7 }));
+    expect(loadState(file)).toEqual({ lastGood: {}, alertsFired: ['ok'], lastVersion: null });
   });
 });
