@@ -37,6 +37,14 @@ Run against the installed build (`dist\AI Usage Setup <version>.exe`). Tick each
 - [ ] "Start with Windows" on → sign out/in (or reboot) → app starts; off → does not start.
 - [ ] Tray: Hide/Show island, Refresh now, Settings…, Quit all work.
 
+## Switch account
+- [ ] The sign-in icon beside each provider opens a console window titled with `wsl.exe` (WSL source) or `cmd` (Windows source).
+- [ ] The console runs `claude auth login` / `codex login` and shows the sign-in URL; the browser flow completes.
+- [ ] Within a minute of finishing, the island shows the new account's plan and usage.
+- [ ] Signing in to a different account works without logging out first. If a CLI refuses because a session exists, note it: the app would then need to run `logout` first.
+- [ ] Closing the console without signing in leaves the previous account signed in, and MCP server logins intact.
+- [ ] Tray → **Switch account** lists only providers with a detected source, and is disabled when there are none — including straight after launch, once detection finishes.
+
 ## Updates
 Install an older version, then publish/point at a newer one.
 - [ ] Tray shows "Downloading update X…", then "Restart to update to X"; clicking it restarts into the new version.

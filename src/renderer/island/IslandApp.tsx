@@ -115,6 +115,7 @@ export function IslandApp({ api = window.api, clock = Date.now }: { api?: Api; c
           onRefresh={() => api.refresh()}
           onOpenSettings={() => api.openSettings()}
           onOpenUsage={(id) => api.openUsagePage(id)}
+          onSwitchAccount={(id) => api.switchAccount(id)}
         />
       )}
     </div>

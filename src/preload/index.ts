@@ -19,6 +19,7 @@ const api: Api = {
   onCollapse: (listener) => subscribe(IPC.islandCollapse, listener),
   onExpand: (listener) => subscribe(IPC.islandExpand, listener),
   openUsagePage: (providerId) => ipcRenderer.send(IPC.openUsagePage, providerId),
+  switchAccount: (providerId) => ipcRenderer.send(IPC.switchAccount, providerId),
   openSettings: () => ipcRenderer.send(IPC.openSettings),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   setSettings: (patch) => ipcRenderer.invoke(IPC.settingsSet, patch),

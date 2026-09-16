@@ -9,6 +9,9 @@ export interface TrayActions {
   openSettings(): void;
   getOpenAtLogin(): boolean;
   setOpenAtLogin(value: boolean): void;
+  /** Providers that can be signed in from here: known CLI, and a source to run it on. */
+  switchableProviders(): { id: string; name: string }[];
+  switchAccount(providerId: string): void;
   updateStatus(): UpdateStatus;
   checkForUpdates(): void;
   installUpdate(): void;
@@ -32,6 +35,15 @@ export function createTray(iconPath: string, actions: TrayActions): { tray: Tray
     };
   };
 
+  const switchItem = () => {
+    const providers = actions.switchableProviders();
+    if (providers.length === 0) return { label: 'Switch account', enabled: false };
+    return {
+      label: 'Switch account',
+      submenu: providers.map((provider) => ({ label: provider.name, click: () => actions.switchAccount(provider.id) })),
+    };
+  };
+
   const rebuild = () =>
     tray.setContextMenu(
       Menu.buildFromTemplate([
@@ -44,6 +56,7 @@ export function createTray(iconPath: string, actions: TrayActions): { tray: Tray
         },
         { label: 'Refresh now', click: () => actions.refresh() },
         updateItem(),
+        switchItem(),
         { label: 'Settings…', click: () => actions.openSettings() },
         { type: 'separator' },
         {

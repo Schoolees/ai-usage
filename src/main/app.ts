@@ -20,12 +20,19 @@ import trayIcon from '../../resources/tray.ico?asset';
 import { openSettingsWindow, updateSettingsWindowTheme } from './settings-window';
 import { defaultThemeDeps, readSystemTheme } from './system-theme';
 import { createTray } from './tray';
+import { hasLoginCommand, startLogin } from './switch-account';
 import { createUpdater, notifyUpdateReady } from './updater';
 import { AlertEngine } from './alert-engine';
 import { alertText } from './alert-text';
 import { showAlert } from './notifier';
 import { createForegroundReader } from './foreground-window';
 import { FullscreenWatch } from './fullscreen';
+
+/**
+ * A sign-in finishes in its own console, at whatever pace the user clicks through the browser, so
+ * nudge the scheduler a few times rather than guessing at one delay.
+ */
+const SWITCH_REFRESH_DELAYS = [5_000, 20_000, 60_000];
 
 export interface RunningApp {
   island: IslandWindow;
@@ -61,6 +68,12 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     updateSettingsWindowTheme(theme);
   };
 
+  /**
+   * Runs after every detection. A plain hook rather than a call to the tray, because detectAll can run
+   * (through the providers IPC handler) before the tray exists; the tray assigns this once it does.
+   */
+  let afterDetect: () => void = () => {};
+
   async function detectAll(): Promise<void> {
     const candidates = await listCandidateHomes(defaultDetectDeps());
     for (const plugin of plugins) {
@@ -69,6 +82,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
         return [];
       });
     }
+    afterDetect();
   }
 
   const enabledPlugins = () => plugins.filter((plugin) => providerSettings(settings, plugin.id).enabled);
@@ -190,6 +204,21 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   // Registered before the first await (detectAll, below) so the renderer's earliest getView(),
   // resizeIsland and setExpanded calls are never dropped while source detection is in flight.
   ipcMain.handle(IPC.viewGet, () => view());
+  /** The source a provider is being read from right now: the configured one, or the automatic pick. */
+  const activeSource = (providerId: string) => pickSource(detected[providerId] ?? [], providerSettings(settings, providerId).sourceHome);
+
+  const switchAccount = (providerId: string) => {
+    const source = activeSource(providerId);
+    if (!source) {
+      log.warn(`switch account: no source detected for ${providerId}`);
+      return;
+    }
+    if (startLogin(providerId, source, log)) {
+      // The first refresh after the user finishes signing in shows the new account's usage.
+      for (const delay of SWITCH_REFRESH_DELAYS) setTimeout(() => void scheduler.refreshNow(), delay);
+    }
+  };
+
   ipcMain.handle(IPC.refresh, (_event, olderThanMs?: number) => scheduler.refreshNow({ olderThanMs }));
   ipcMain.on(IPC.islandResize, (_event, width: number, height: number) => island.resize(width, height));
   ipcMain.on(IPC.islandSetExpanded, (_event, expanded: boolean) => island.setExpanded(expanded));
@@ -198,6 +227,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     const url = plugins.find((plugin) => plugin.id === providerId)?.usageUrl;
     if (url) void shell.openExternal(url);
   });
+  ipcMain.on(IPC.switchAccount, (_event, providerId: string) => switchAccount(providerId));
   ipcMain.handle(IPC.settingsGet, () => settings);
   ipcMain.handle(IPC.settingsSet, (_event, patch: SettingsPatch) => applySettings(mergeSettings(settings, patch)));
   ipcMain.handle(IPC.providersGet, async (): Promise<ProviderOption[]> => {
@@ -206,7 +236,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
       id: plugin.id,
       name: plugin.name,
       sources: (detected[plugin.id] ?? []).map(({ kind, label, home, lastModifiedMs }) => ({ kind, label, home, lastModifiedMs })),
-      activeHome: pickSource(detected[plugin.id] ?? [], providerSettings(settings, plugin.id).sourceHome)?.home ?? null,
+      activeHome: activeSource(plugin.id)?.home ?? null,
     }));
   });
   ipcMain.handle(IPC.displaysGet, (): DisplayOption[] => listDisplays().map(({ id, label, primary }) => ({ id, label, primary })));
@@ -230,12 +260,17 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     setOpenAtLogin: (value) => {
       applySettings(mergeSettings(settings, { openAtLogin: value }));
     },
+    switchableProviders: () =>
+      plugins.filter((plugin) => hasLoginCommand(plugin.id) && activeSource(plugin.id)).map(({ id, name }) => ({ id, name })),
+    switchAccount,
     updateStatus: () => updater.status(),
     checkForUpdates: () => updater.check(),
     installUpdate: () => updater.install(),
     quit: () => app.quit(),
   });
 
+  // The tray's "Switch account" entries depend on which sources were found.
+  afterDetect = () => trayHandle.rebuild();
   await detectAll();
   scheduler.setTasks(tasks());
   setInterval(() => void detectAll(), 5 * MINUTE);

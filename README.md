@@ -37,7 +37,8 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 - **Follows Windows personalization.** Dark/light mode, accent color, and Transparency effects (Mica backdrop on the settings window), updated live.
 - **Stays out of the way.** Clicks pass through everywhere except the pill and open panel. It hides automatically over fullscreen apps, can live on any display, and starts with Windows.
 - **Automatic updates.** New releases are downloaded in the background from GitHub and installed when you quit, restarting into the new version; the tray offers a restart as soon as one is ready. Turn it off in Settings → Updates.
-- **Tray menu.** Show/hide the island, refresh now, update status, settings, start with Windows, quit.
+- **Switch accounts.** The sign-in icon next to each provider (or **Switch account** in the tray) opens a console running that CLI's own sign-in — `claude auth login` or `codex login` — in the Windows home or WSL distro the app is reading. Finish the browser flow and the island picks up the new account. AI Usage never reads or stores the credentials; the CLI does the signing in.
+- **Tray menu.** Show/hide the island, refresh now, update status, switch account, settings, start with Windows, quit.
 
 ## How it gets the numbers
 

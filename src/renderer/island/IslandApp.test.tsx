@@ -19,6 +19,7 @@ function fakeApi(view: IslandView) {
     onCollapse: (l) => (listeners.collapse.push(l), () => {}),
     onExpand: (l) => (listeners.expand.push(l), () => {}),
     openUsagePage: vi.fn(),
+    switchAccount: vi.fn(),
     openSettings: vi.fn(),
     getSettings: vi.fn(),
     setSettings: vi.fn(),

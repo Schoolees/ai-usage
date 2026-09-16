@@ -13,6 +13,7 @@ export const IPC = {
   islandCollapse: 'island:collapse',
   islandExpand: 'island:expand',
   openUsagePage: 'app:openUsagePage',
+  switchAccount: 'app:switchAccount',
   openSettings: 'app:openSettings',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
@@ -55,6 +56,8 @@ export interface Api {
   onCollapse(listener: () => void): () => void;
   onExpand(listener: () => void): () => void;
   openUsagePage(providerId: string): void;
+  /** Opens a console running the provider's CLI sign-in, so the user can switch accounts. */
+  switchAccount(providerId: string): void;
   openSettings(): void;
   getSettings(): Promise<Settings>;
   setSettings(patch: SettingsPatch): Promise<Settings>;

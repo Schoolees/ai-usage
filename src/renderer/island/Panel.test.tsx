@@ -7,7 +7,7 @@ import { statusText } from './StatusLine';
 
 import { claude, codex, now } from './test-fixtures';
 
-const handlers = () => ({ onRefresh: vi.fn(), onOpenSettings: vi.fn(), onOpenUsage: vi.fn() });
+const handlers = () => ({ onRefresh: vi.fn(), onOpenSettings: vi.fn(), onOpenUsage: vi.fn(), onSwitchAccount: vi.fn() });
 
 describe('Panel', () => {
   it('renders a group per provider with plan, source and limit rows', () => {
@@ -20,6 +20,15 @@ describe('Panel', () => {
     expect(row.textContent).toContain('Resets in 2 hr 8 min');
     expect(row.textContent).toContain('73%');
     expect(screen.getByTestId('limit-codex-10080m').querySelector('.fill')?.className).toContain('level-critical');
+  });
+
+  it('offers each provider its own account switch', () => {
+    const h = handlers();
+    render(<Panel view={{ providers: [claude, codex], generatedAt: now }} now={now} {...h} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Switch Claude account' }));
+    expect(h.onSwitchAccount).toHaveBeenCalledWith('claude');
+    fireEvent.click(screen.getByRole('button', { name: 'Switch ChatGPT (Codex) account' }));
+    expect(h.onSwitchAccount).toHaveBeenCalledWith('codex');
   });
 
   it('wires the header and footer buttons', () => {

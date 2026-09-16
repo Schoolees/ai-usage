@@ -16,6 +16,7 @@ function fakeApi(setSettings: Api['setSettings'] = async (patch: SettingsPatch) 
     onCollapse: vi.fn(),
     onExpand: vi.fn(),
     openUsagePage: vi.fn(),
+    switchAccount: vi.fn(),
     openSettings: vi.fn(),
     getSettings: vi.fn(async () => DEFAULT_SETTINGS),
     setSettings: vi.fn(setSettings),

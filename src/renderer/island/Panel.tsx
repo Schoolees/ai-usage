@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUpRight, Clock, Monitor, RefreshCw, Settings, SquareTerminal } from 'lucide-react';
+import { ArrowUpRight, Clock, LogIn, Monitor, RefreshCw, Settings, SquareTerminal } from 'lucide-react';
 import { formatDuration } from '../../shared/format';
 import type { IslandView, ProviderView } from '../../shared/view-model';
 import { LimitRow } from './LimitRow';
@@ -20,6 +20,7 @@ interface PanelProps {
   onRefresh(): Promise<void> | void;
   onOpenSettings(): void;
   onOpenUsage(providerId: string): void;
+  onSwitchAccount(providerId: string): void;
   onHoverStart?(): void;
   onHoverEnd?(): void;
   hidden?: boolean;
@@ -28,7 +29,7 @@ interface PanelProps {
 /** The refresh icon keeps turning at least this long, so a fast refresh still reads as one full spin. */
 const MIN_SPIN_MS = 700;
 
-export function Panel({ view, now, onRefresh, onOpenSettings, onOpenUsage, onHoverStart, onHoverEnd, hidden = false }: PanelProps) {
+export function Panel({ view, now, onRefresh, onOpenSettings, onOpenUsage, onSwitchAccount, onHoverStart, onHoverEnd, hidden = false }: PanelProps) {
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = async () => {
@@ -67,9 +68,19 @@ export function Panel({ view, now, onRefresh, onOpenSettings, onOpenUsage, onHov
                 </span>
               )}
             </span>
-            <button type="button" className="icon-btn" aria-label={`Open ${provider.name} usage page`} onClick={() => onOpenUsage(provider.id)}>
-              <ArrowUpRight size={14} aria-hidden />
-            </button>
+            <span className="btns">
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label={`Switch ${provider.name} account`}
+                onClick={() => onSwitchAccount(provider.id)}
+              >
+                <LogIn size={14} aria-hidden />
+              </button>
+              <button type="button" className="icon-btn" aria-label={`Open ${provider.name} usage page`} onClick={() => onOpenUsage(provider.id)}>
+                <ArrowUpRight size={14} aria-hidden />
+              </button>
+            </span>
           </header>
           {provider.status !== 'ok' && <StatusLine provider={provider} now={now} onOpenSettings={onOpenSettings} />}
           {provider.limits.map((limit) => (
