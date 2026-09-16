@@ -46,7 +46,9 @@ jobs:
       - run: npm test
 
       - name: Build the installer
-        run: npx electron-builder --win --publish never
+        run: |
+          npm run build
+          npx electron-builder --win --publish never
 
       - name: Name the installer
         id: installer
