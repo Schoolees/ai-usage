@@ -1,6 +1,7 @@
 import { Bell, Gauge, PanelTop, Plug, RefreshCw, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode, type UIEvent } from 'react';
 import type { Api, DisplayOption, ProviderOption } from '../../shared/ipc';
+import { sourceLabelFromHome } from '../../shared/format';
 import { providerSettings, type Settings, type SettingsPatch } from '../../shared/settings-schema';
 import { NumberInput } from './NumberInput';
 import { Select } from './Select';
@@ -144,6 +145,22 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
         <Section id="providers" title="Providers">
           {providers.map((provider) => {
             const current = providerSettings(settings, provider.id);
+            const options = [
+              { value: '', label: 'Automatic (most recently used)' },
+              ...provider.sources.map((source) => ({ value: source.home, label: source.label, detail: source.home })),
+            ];
+            // A saved source can be missing after a restart (e.g. its WSL distro isn't running yet).
+            // Keep it selected and visible instead of falling back to a blank "Select…".
+            const configuredMissing = current.sourceHome !== null && !provider.sources.some((s) => s.home === current.sourceHome);
+            if (configuredMissing && current.sourceHome) {
+              options.push({ value: current.sourceHome, label: `${sourceLabelFromHome(current.sourceHome)} — not available`, detail: current.sourceHome });
+            }
+            const activeLabel = provider.sources.find((s) => s.home === provider.activeHome)?.label;
+            const description = configuredMissing
+              ? `Your chosen source is not available right now${activeLabel ? `, so it is using ${activeLabel}` : ' and no other source was found'}.`
+              : provider.sources.length === 0
+                ? 'Not found on Windows or running WSL distros.'
+                : 'Where to read the login or logs from.';
             return (
               <div key={provider.id} className="group">
                 <SwitchRow
@@ -152,17 +169,11 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
                   checked={current.enabled}
                   onChange={(enabled) => void saveProvider(provider.id, { enabled })}
                 />
-                <SelectRow
-                  label="Source"
-                  description={provider.sources.length === 0 ? 'Not found on Windows or running WSL distros.' : 'Where to read the login or logs from.'}
-                >
+                <SelectRow label="Source" description={description}>
                   <Select
                     label={`${provider.name} source`}
                     value={current.sourceHome ?? ''}
-                    options={[
-                      { value: '', label: 'Automatic (most recently used)' },
-                      ...provider.sources.map((source) => ({ value: source.home, label: source.label, detail: source.home })),
-                    ]}
+                    options={options}
                     onChange={(sourceHome) => void saveProvider(provider.id, { sourceHome: sourceHome || null })}
                   />
                 </SelectRow>

@@ -37,3 +37,9 @@ export function planBadge(plan: string | undefined): string | null {
   const name = plan?.replace(/\(.*?\)/g, '').trim();
   return name ? name.toUpperCase() : null;
 }
+
+/** Best-effort label for a home folder the app can no longer see: "WSL · Ubuntu-24.04" or "Windows". */
+export function sourceLabelFromHome(home: string): string {
+  const distro = /^\\\\wsl\.localhost\\([^\\]+)\\/i.exec(home)?.[1];
+  return distro ? `WSL · ${distro}` : 'Windows';
+}

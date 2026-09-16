@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { formatDuration, formatPercent, formatReset, planBadge } from './format';
+import { formatDuration, formatPercent, formatReset, planBadge, sourceLabelFromHome } from './format';
 
 const now = Date.UTC(2026, 8, 15, 17, 0); // Tue 15 Sep 2026, 17:00 UTC
 
@@ -66,6 +66,17 @@ describe('planBadge', () => {
   it('returns null without a plan', () => {
     expect(planBadge(undefined)).toBeNull();
     expect(planBadge('  ')).toBeNull();
+  });
+});
+
+describe('sourceLabelFromHome', () => {
+  it('names a WSL distro from its UNC home path', () => {
+    expect(sourceLabelFromHome('\\\\wsl.localhost\\Ubuntu-24.04\\home\\me')).toBe('WSL · Ubuntu-24.04');
+  });
+
+  it('calls anything else Windows', () => {
+    expect(sourceLabelFromHome('C:\\Users\\me')).toBe('Windows');
+    expect(sourceLabelFromHome('')).toBe('Windows');
   });
 });
 

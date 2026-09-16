@@ -20,8 +20,13 @@ function fakeApi(setSettings: Api['setSettings'] = async (patch: SettingsPatch) 
     getSettings: vi.fn(async () => DEFAULT_SETTINGS),
     setSettings: vi.fn(setSettings),
     getProviders: vi.fn(async () => [
-      { id: 'claude', name: 'Claude', sources: [{ kind: 'wsl' as const, label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\me', lastModifiedMs: 2 }] },
-      { id: 'codex', name: 'ChatGPT (Codex)', sources: [] },
+      {
+        id: 'claude',
+        name: 'Claude',
+        sources: [{ kind: 'wsl' as const, label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\me', lastModifiedMs: 2 }],
+        activeHome: '\\\\wsl.localhost\\Ubuntu\\home\\me',
+      },
+      { id: 'codex', name: 'ChatGPT (Codex)', sources: [], activeHome: null },
     ]),
     getDisplays: vi.fn(async () => [
       { id: 1, label: 'Display 1', primary: true },
@@ -95,6 +100,28 @@ describe('SettingsApp', () => {
       providers: { ...DEFAULT_SETTINGS.providers, claude: { enabled: true, sourceHome: '\\\\wsl.localhost\\Ubuntu\\home\\me' } },
     });
     expect(screen.getByText('Not found on Windows or running WSL distros.')).toBeTruthy();
+  });
+
+  it('keeps showing a configured source that is not available right now, and names the one in use', async () => {
+    const missing = '\\\\wsl.localhost\\Ubuntu-24.04\\home\\me';
+    const settings = { ...DEFAULT_SETTINGS, providers: { ...DEFAULT_SETTINGS.providers, claude: { enabled: true, sourceHome: missing } } };
+    const api: Api = {
+      ...fakeApi(),
+      getSettings: vi.fn(async () => settings),
+      getProviders: vi.fn(async () => [
+        {
+          id: 'claude',
+          name: 'Claude',
+          sources: [{ kind: 'windows' as const, label: 'Windows', home: 'C:\\Users\\me', lastModifiedMs: 1 }],
+          activeHome: 'C:\\Users\\me',
+        },
+      ]),
+    };
+    await renderSettings(api);
+
+    // Not "Select…": the saved source stays visible, marked unavailable.
+    expect(screen.getByRole('button', { name: 'Claude source' }).textContent).toContain('WSL · Ubuntu-24.04 — not available');
+    expect(screen.getByText(/not available right now.*using Windows/i)).toBeTruthy();
   });
 
   it('saves display, toggles and minutes', async () => {

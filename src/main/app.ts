@@ -200,6 +200,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
       id: plugin.id,
       name: plugin.name,
       sources: (detected[plugin.id] ?? []).map(({ kind, label, home, lastModifiedMs }) => ({ kind, label, home, lastModifiedMs })),
+      activeHome: pickSource(detected[plugin.id] ?? [], providerSettings(settings, plugin.id).sourceHome)?.home ?? null,
     }));
   });
   ipcMain.handle(IPC.displaysGet, (): DisplayOption[] => listDisplays().map(({ id, label, primary }) => ({ id, label, primary })));

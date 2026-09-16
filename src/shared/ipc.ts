@@ -39,6 +39,8 @@ export interface ProviderOption {
   id: string;
   name: string;
   sources: SourceOption[];
+  /** Home folder actually being read right now (the configured one, or the automatic pick) */
+  activeHome: string | null;
 }
 
 export interface Api {
