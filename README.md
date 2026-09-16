@@ -11,7 +11,7 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 **Island.** The pill hangs from the top edge of the screen: each provider's 5-hour usage, its plan, and a warning color as a limit fills up.
 
 <p align="center">
-  <img src="docs/screenshots/island.png" alt="Island pill showing Claude 37% MAX and Codex 100% PLUS in red" width="75%">
+  <img src="docs/screenshots/island.png" alt="Island pill showing Claude 39% MAX and Codex 100% PLUS in red" width="75%">
 </p>
 
 **Panel.** Hover the pill to expand it: every limit with its reset time, the source (Windows or WSL), and when the data was last updated.
@@ -26,7 +26,7 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
   <img src="docs/screenshots/settings.png" alt="Settings window with Providers, Island, Alerts, Refresh and Updates in the sidebar, and provider switches and source dropdowns" width="75%">
 </p>
 
-<p align="center"><sub>Captured from the running app on Windows 11: <code>npm run screenshots</code>.</sub></p>
+<p align="center"><sub>Captured from the running app on Windows 11, all at the same scale: <code>npm run screenshots</code>.</sub></p>
 
 ## Features
 

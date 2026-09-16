@@ -6,7 +6,12 @@
 # It drives the real pointer (the island only expands on hover) and puts it back afterwards, so
 # don't touch the mouse while it runs. The shots contain whatever your desktop and your plan usage
 # look like at the time; check them before committing.
-param([string]$Out = "docs\screenshots")
+param(
+  [string]$Out = "docs\screenshots",
+  # Every shot is this wide, so the README renders all three at the same scale instead of zooming
+  # each one differently to hit the same column width.
+  [int]$Width = 1000
+)
 
 Add-Type -AssemblyName System.Drawing
 Add-Type @"
@@ -22,7 +27,7 @@ public class Shot {
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
   [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
   [DllImport("user32.dll")] static extern uint SendInput(uint n, INPUT[] inputs, int size);
-  [DllImport("user32.dll")] static extern int GetSystemMetrics(int i);
+  [DllImport("user32.dll")] public static extern int GetSystemMetrics(int i);
   [DllImport("user32.dll")] static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
 
   /** Close every settings window, so an already-open one cannot sit behind the island shots. */
@@ -82,13 +87,18 @@ public class Shot {
 }
 "@
 
-function Save($left, $top, $width, $height, $path) {
-  $bmp = New-Object Drawing.Bitmap $width, $height
+# Shoot a $Width-wide slice of the desktop centred on $centreX, clamped to the screen so the
+# requested size is always the size that comes out.
+function Save($centreX, $top, $height, $path) {
+  $screenW = [Shot]::GetSystemMetrics(0); $screenH = [Shot]::GetSystemMetrics(1)
+  $left = [Math]::Min([Math]::Max(0, [int]($centreX - $Width / 2)), $screenW - $Width)
+  $top = [Math]::Min([Math]::Max(0, [int]$top), $screenH - $height)
+  $bmp = New-Object Drawing.Bitmap $Width, $height
   $g = [Drawing.Graphics]::FromImage($bmp)
-  $g.CopyFromScreen($left, $top, 0, 0, (New-Object Drawing.Size $width, $height))
+  $g.CopyFromScreen($left, $top, 0, 0, (New-Object Drawing.Size $Width, $height))
   $bmp.Save((Resolve-Path $Out).Path + "\$path", [Drawing.Imaging.ImageFormat]::Png)
   $g.Dispose(); $bmp.Dispose()
-  Write-Output "$Out\$path  ${width}x${height}"
+  Write-Output "$Out\$path  ${Width}x${height}"
 }
 
 # Rest the pointer on the pill and keep nudging: one move is easy for the renderer to miss.
@@ -118,27 +128,33 @@ $cx = [int](($island.Left + $island.Right) / 2)
 # Collapsed pill, over a slice of the desktop it hangs from.
 [Shot]::Glide(80, 700, 20)
 Start-Sleep -Milliseconds 1500
-Save ($cx - 500) $island.Top 1000 130 'island.png'
+Save $cx $island.Top 130 'island.png'
 
 # Expanded panel.
 Hover $island $cx
 Start-Sleep -Milliseconds 400
-Save ($cx - 470) $island.Top 940 350 'panel.png'
+Save $cx $island.Top 350 'panel.png'
 
 # Settings, opened from the panel's gear: bottom-right of the panel, inside the window's 32px/48px
-# of transparent shadow padding.
-Hover $island $cx
-[Shot]::Glide(($island.Right - 54), ($island.Bottom - 160), 8)
-[Shot]::Glide(($island.Right - 54), ($island.Bottom - 70), 8)
-Start-Sleep -Milliseconds 300
-[Shot]::Click(($island.Right - 54), ($island.Bottom - 70))
-Start-Sleep -Seconds 3
-# The island is always on top: move away so the panel collapses out of the settings shot.
-[Shot]::Glide(80, 700, 20)
-Start-Sleep -Seconds 2
-
-$settings = [Shot]::Find($pids, $true)
-if ($settings.Right -eq 0) { throw 'Settings window not found.' }
-Save $settings.Left $settings.Top ($settings.Right - $settings.Left) ($settings.Bottom - $settings.Top) 'settings.png'
+# of transparent shadow padding. The hover sometimes does not take, so give the click a few goes.
+$gearX = $island.Right - 54
+$gearY = $island.Bottom - 70
+$settings = New-Object Shot+RECT
+for ($try = 1; $try -le 3 -and $settings.Right -eq 0; $try++) {
+  Hover $island $cx
+  [Shot]::Glide($gearX, ($island.Bottom - 160), 8)
+  [Shot]::Glide($gearX, $gearY, 8)
+  Start-Sleep -Milliseconds 300
+  [Shot]::Click($gearX, $gearY)
+  Start-Sleep -Seconds 3
+  # The island is always on top: move away so the panel collapses out of the settings shot.
+  [Shot]::Glide(80, 700, 20)
+  Start-Sleep -Seconds 2
+  $settings = [Shot]::Find($pids, $true)
+}
+if ($settings.Right -eq 0) { throw 'Settings window did not open.' }
+# A little desktop around the window, so it sits in the same frame as the island shots.
+$margin = 24
+Save ([int](($settings.Left + $settings.Right) / 2)) ($settings.Top - $margin) (($settings.Bottom - $settings.Top) + 2 * $margin) 'settings.png'
 
 [Shot]::Glide($before.X, $before.Y, 10)
