@@ -16,6 +16,11 @@ export interface Updater {
   check(): void;
   /** Quit and install a downloaded update */
   install(): void;
+  /**
+   * Called while quitting: installs a downloaded update and relaunches into it. Returns true when it
+   * has taken over the quit, so the caller should stop and let the updater restart the app.
+   */
+  installOnQuit(): boolean;
   setEnabled(enabled: boolean): void;
   stop(): void;
 }
@@ -30,13 +35,15 @@ export interface UpdaterOptions {
 
 /**
  * Updates from the project's GitHub releases (public repo, no token). Downloads in the background and
- * installs on quit; the tray offers a restart as soon as one is ready.
+ * installs when the app quits, restarting into the new version; the tray offers a restart as soon as
+ * one is ready.
  */
 export function createUpdater({ log, enabled, onStatus, onReadyNotification }: UpdaterOptions): Updater {
   let status: UpdateStatus = { state: enabled ? 'idle' : 'disabled', version: null };
   let timer: ReturnType<typeof setInterval> | undefined;
   let firstCheck: ReturnType<typeof setTimeout> | undefined;
   let allowed = enabled;
+  let installing = false;
 
   const set = (next: UpdateStatus) => {
     status = next;
@@ -46,12 +53,28 @@ export function createUpdater({ log, enabled, onStatus, onReadyNotification }: U
   // In development there is no installed app to replace, and no packaged version to compare against.
   if (!app.isPackaged) {
     log.info('updates: skipped (not a packaged build)');
-    return { status: () => ({ state: 'disabled', version: null }), check: () => {}, install: () => {}, setEnabled: () => {}, stop: () => {} };
+    return {
+      status: () => ({ state: 'disabled', version: null }),
+      check: () => {},
+      install: () => {},
+      installOnQuit: () => false,
+      setEnabled: () => {},
+      stop: () => {},
+    };
   }
 
   autoUpdater.logger = log;
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // electron-updater's own install-on-quit runs the installer without relaunching, so the app just
+  // disappears when you quit it. We install from the quit path ourselves to bring it back.
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  /** isSilent, isForceRunAfter: no installer window, and the app comes back in the new version. */
+  const quitAndInstall = () => {
+    installing = true;
+    log.info(`updates: installing ${status.version ?? ''} and restarting`);
+    autoUpdater.quitAndInstall(true, true);
+  };
 
   autoUpdater.on('checking-for-update', () => set({ state: 'checking', version: null }));
   autoUpdater.on('update-not-available', () => set({ state: 'up-to-date', version: null }));
@@ -59,7 +82,7 @@ export function createUpdater({ log, enabled, onStatus, onReadyNotification }: U
   autoUpdater.on('download-progress', (progress) => set({ state: 'downloading', version: status.version, percent: progress.percent }));
   autoUpdater.on('update-downloaded', (info) => {
     set({ state: 'ready', version: info.version });
-    onReadyNotification(info.version, () => autoUpdater.quitAndInstall());
+    onReadyNotification(info.version, quitAndInstall);
   });
   autoUpdater.on('error', (error) => {
     log.warn('updates: check failed', error);
@@ -90,7 +113,13 @@ export function createUpdater({ log, enabled, onStatus, onReadyNotification }: U
   return {
     status: () => status,
     check,
-    install: () => autoUpdater.quitAndInstall(),
+    install: quitAndInstall,
+    installOnQuit: () => {
+      // quitAndInstall quits again once the installer is running; that pass must fall through.
+      if (installing || status.state !== 'ready') return false;
+      quitAndInstall();
+      return true;
+    },
     setEnabled: (next) => {
       if (next === allowed) return;
       allowed = next;
@@ -100,7 +129,7 @@ export function createUpdater({ log, enabled, onStatus, onReadyNotification }: U
         check();
       } else {
         stop();
-        // A downloaded update still installs on quit; nothing new will be fetched.
+        // A downloaded update still installs when the app quits; nothing new will be fetched.
         if (status.state !== 'ready') set({ state: 'disabled', version: null });
       }
     },

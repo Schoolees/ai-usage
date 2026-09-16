@@ -36,7 +36,7 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 - **Alerts.** A Windows notification when a limit crosses your warning (default 80%) or critical (default 95%) threshold, and when a busy window resets. Each alert fires once per window.
 - **Follows Windows personalization.** Dark/light mode, accent color, and Transparency effects (Mica backdrop on the settings window), updated live.
 - **Stays out of the way.** Clicks pass through everywhere except the pill and open panel. It hides automatically over fullscreen apps, can live on any display, and starts with Windows.
-- **Automatic updates.** New releases are downloaded in the background from GitHub and installed when you quit; the tray offers a restart as soon as one is ready. Turn it off in Settings → Updates.
+- **Automatic updates.** New releases are downloaded in the background from GitHub and installed when you quit, restarting into the new version; the tray offers a restart as soon as one is ready. Turn it off in Settings → Updates.
 - **Tray menu.** Show/hide the island, refresh now, update status, settings, start with Windows, quit.
 
 ## How it gets the numbers
@@ -108,6 +108,8 @@ If `node -v` on Windows prints a version below 22.12, call a newer Node explicit
 ## Project layout
 
 ```
+build/
+  installer.nsh    custom NSIS hooks (restores a missing Start Menu shortcut on update)
 src/
   main/            Electron main process
     providers/     provider plugins (claude/, codex/) behind a common interface

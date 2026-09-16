@@ -37,6 +37,14 @@ Run against the installed build (`dist\AI Usage Setup <version>.exe`). Tick each
 - [ ] "Start with Windows" on → sign out/in (or reboot) → app starts; off → does not start.
 - [ ] Tray: Hide/Show island, Refresh now, Settings…, Quit all work.
 
+## Updates
+Install an older version, then publish/point at a newer one.
+- [ ] Tray shows "Downloading update X…", then "Restart to update to X"; clicking it restarts into the new version.
+- [ ] Quitting from the tray with an update ready installs it and the app comes back by itself, at the new version.
+- [ ] After that update the Start Menu entry still exists — delete `%APPDATA%\Microsoft\Windows\Start Menu\Programs\AI Usage.lnk`, update again, and it is recreated.
+- [ ] Apps & features lists exactly one "AI Usage" entry, at the installed version.
+- [ ] Settings → Updates → off: the tray reads "Updates are turned off" and no check happens.
+
 ## Safety
 - [ ] `%APPDATA%\ai-usage\logs\main.log`, `settings.json`, `state.json` contain no `Bearer`, `sk-ant`, `accessToken`, `refresh`.
 

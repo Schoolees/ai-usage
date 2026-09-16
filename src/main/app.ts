@@ -243,9 +243,12 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   setInterval(pushView, 30_000);
 
   // Flush any pending debounced write so the last alert keys and usage numbers survive quit.
-  app.on('before-quit', () => {
+  app.on('before-quit', (event) => {
     clearTimeout(saveTimer);
     writeState();
+    // A downloaded update installs as the app quits. Hold the quit so the installer can restart us,
+    // otherwise the app would silently vanish until the user launches it again.
+    if (updater.installOnQuit()) event.preventDefault();
   });
 
   void refreshTheme();
