@@ -1,3 +1,4 @@
+import { MINUTE } from './time';
 import type { Limit, ProviderStatus, Snapshot, Source } from './types';
 
 export type Level = 'normal' | 'warn' | 'critical';
@@ -86,8 +87,12 @@ export function buildProviderView(input: ProviderViewInput): ProviderView {
     latest.status === 'not-found'
       ? []
       : (shown?.limits ?? []).map((limit) => {
-          // Past its reset time with no newer record, the window has started over: nothing used yet.
-          const usedPercent = limit.resetsAt !== null && limit.resetsAt <= now ? 0 : limit.usedPercent;
+          // Past its reset time with no newer record, the window has started over. That reads as 0% only
+          // if our data is newer than the window itself; otherwise usage since then is unknown, and
+          // showing 0% would be a confident wrong number.
+          const hasReset = limit.resetsAt !== null && limit.resetsAt <= now;
+          const dataCoversWindow = shown !== undefined && now - shown.dataAsOf <= windowMinutes(limit) * MINUTE;
+          const usedPercent = hasReset ? (dataCoversWindow ? 0 : null) : limit.usedPercent;
           return { ...limit, usedPercent, level: levelFor(usedPercent, warnPercent, criticalPercent) };
         });
 

@@ -92,6 +92,19 @@ describe('buildProviderView', () => {
     expect(view.headlinePercent).toBe(0);
   });
 
+  it('shows no number instead of 0% when the data is older than the window that reset', () => {
+    const codex: Snapshot = {
+      providerId: 'codex',
+      source,
+      status: 'ok',
+      dataAsOf: now - 2 * 86_400_000, // two days old: we cannot know what happened since
+      limits: [{ id: 'codex-300m', label: '5-hour limit', usedPercent: 91, resetsAt: now - 20 * 60_000 }],
+    };
+    const view = buildProviderView(input({ latest: codex }, { id: 'codex', staleAfterMs: 86_400_000, fromLogs: true }));
+    expect(view.limits[0].usedPercent).toBeNull();
+    expect(view.headlinePercent).toBeNull();
+  });
+
   it('headlines the shortest window (5-hour) even when a longer window is higher, but levels by the worst', () => {
     const snapshot = okSnapshot(now - 60_000, 20);
     snapshot.limits[1] = { ...snapshot.limits[1], usedPercent: 90 };
