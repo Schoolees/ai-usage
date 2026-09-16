@@ -11,7 +11,7 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 **Island.** The pill hangs from the top edge of the screen: each provider's 5-hour usage, its plan, and a warning color as a limit fills up.
 
 <p align="center">
-  <img src="docs/screenshots/island.png" alt="Island pill showing Claude 73% MAX and Codex 86% PLUS" width="75%">
+  <img src="docs/screenshots/island.png" alt="Island pill showing Claude 37% MAX and Codex 100% PLUS in red" width="75%">
 </p>
 
 **Panel.** Hover the pill to expand it: every limit with its reset time, the source (Windows or WSL), and when the data was last updated.
@@ -26,7 +26,7 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
   <img src="docs/screenshots/settings.png" alt="Settings window with Providers, Island, Alerts, Refresh and Updates in the sidebar, and provider switches and source dropdowns" width="75%">
 </p>
 
-<p align="center"><sub>Screenshots are rendered from the real components with sample data: <code>npm run screenshots</code>.</sub></p>
+<p align="center"><sub>Captured from the running app on Windows 11: <code>npm run screenshots</code>.</sub></p>
 
 ## Features
 
@@ -81,12 +81,13 @@ npm run build        # bundle to out/
 npm run dist         # build the Windows NSIS installer into dist/
 npm run icons        # regenerate build/icon.ico and resources/tray.ico
 npm run check:sources # print what each provider resolves to on this machine
-npm run screenshots  # re-render docs/screenshots/*.png from the components
+npm run screenshots  # recapture docs/screenshots/*.png from the running app
 ```
 
-`screenshots` renders `scripts/screenshots/` (the real island and settings components, fed sample
-data) in a headless Chromium and writes the three README images. It uses Playwright's cached browser
-if there is one; otherwise set `CHROME` to a Chromium or Chrome binary.
+`screenshots` runs `scripts/screenshots.ps1`, which shoots the island, the expanded panel and the
+settings window from the app as it is actually running. It drives the real pointer, because the
+island only expands on hover, so leave the mouse alone while it runs. The images show whatever your
+desktop and your plan usage look like at the time: check them before committing.
 
 `check:sources` lists every detected source with the data it yields (status, plan, age, limits). Run it
 before a release, or whenever a number looks wrong: it catches provider format drift directly, instead of
@@ -117,7 +118,7 @@ build/
   installer.nsh    custom NSIS hooks (restores a missing Start Menu shortcut on update)
 scripts/
   check-sources.ts what each provider resolves to on this machine
-  screenshots/     README screenshots, rendered from the real components
+  screenshots.ps1  captures the README screenshots from the running app
 src/
   main/            Electron main process
     providers/     provider plugins (claude/, codex/) behind a common interface
