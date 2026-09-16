@@ -12,6 +12,7 @@ describe('settings schema', () => {
       alertsEnabled: true,
       hideInFullscreen: true,
       openAtLogin: true,
+      autoUpdate: true,
     });
     expect(DEFAULT_SETTINGS.warnPercent).toBe(80);
   });

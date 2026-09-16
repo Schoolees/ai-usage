@@ -9,6 +9,12 @@ files:
   - package.json
 asarUnpack:
   - resources/**
+# Stable, space-free asset names so electron-updater's latest.yml matches what GitHub serves.
+artifactName: ai-usage-setup-${version}.${ext}
+publish:
+  provider: github
+  owner: Schoolees
+  repo: ai-usage
 win:
   target:
     - target: nsis

@@ -32,6 +32,7 @@ function fakeApi(setSettings: Api['setSettings'] = async (patch: SettingsPatch) 
       { id: 1, label: 'Display 1', primary: true },
       { id: 2, label: 'Display 2', primary: false },
     ]),
+    getAppInfo: vi.fn(async () => ({ version: '1.2.3' })),
     getTheme: vi.fn(),
     onTheme: vi.fn(),
   } satisfies Api;
@@ -76,7 +77,7 @@ describe('SettingsApp', () => {
     expect(screen.getByLabelText('Warning at').parentElement?.textContent).toContain('%');
     expect(screen.getByLabelText('Check Claude every').parentElement?.textContent).toContain('min');
     const nav = screen.getByRole('navigation', { name: 'Settings sections' });
-    expect([...nav.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Providers', 'Island', 'Alerts', 'Refresh']);
+    expect([...nav.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Providers', 'Island', 'Alerts', 'Refresh', 'Updates']);
   });
 
   it('has its own close button without a tooltip', async () => {
@@ -145,6 +146,17 @@ describe('SettingsApp', () => {
       fireEvent.blur(minutes);
     });
     expect(api.setSettings).toHaveBeenLastCalledWith({ claudeRefreshMs: 300_000 });
+  });
+
+  it('toggles automatic updates and shows the app version', async () => {
+    const api = fakeApi();
+    await renderSettings(api);
+
+    expect(screen.getByText(/version 1\.2\.3/i)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('switch', { name: 'Install updates automatically' }));
+    });
+    expect(api.setSettings).toHaveBeenLastCalledWith({ autoUpdate: false });
   });
 
   it('shows the error when saving fails', async () => {

@@ -1,5 +1,6 @@
 import { Menu, Tray } from 'electron';
 import { PRODUCT_NAME } from '../shared/app-id';
+import { updateMenuItem, type UpdateStatus } from './update-state';
 
 export interface TrayActions {
   toggleIsland(): void;
@@ -8,12 +9,28 @@ export interface TrayActions {
   openSettings(): void;
   getOpenAtLogin(): boolean;
   setOpenAtLogin(value: boolean): void;
+  updateStatus(): UpdateStatus;
+  checkForUpdates(): void;
+  installUpdate(): void;
   quit(): void;
 }
 
 export function createTray(iconPath: string, actions: TrayActions): { tray: Tray; rebuild(): void } {
   const tray = new Tray(iconPath);
   tray.setToolTip(PRODUCT_NAME);
+
+  const updateItem = () => {
+    const item = updateMenuItem(actions.updateStatus());
+    return {
+      label: item.label,
+      enabled: item.enabled,
+      click: () => {
+        if (item.action === 'install') actions.installUpdate();
+        else if (item.action === 'check') actions.checkForUpdates();
+        rebuild();
+      },
+    };
+  };
 
   const rebuild = () =>
     tray.setContextMenu(
@@ -26,6 +43,7 @@ export function createTray(iconPath: string, actions: TrayActions): { tray: Tray
           },
         },
         { label: 'Refresh now', click: () => actions.refresh() },
+        updateItem(),
         { label: 'Settings…', click: () => actions.openSettings() },
         { type: 'separator' },
         {

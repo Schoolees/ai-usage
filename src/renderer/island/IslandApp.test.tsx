@@ -24,6 +24,7 @@ function fakeApi(view: IslandView) {
     setSettings: vi.fn(),
     getProviders: vi.fn(),
     getDisplays: vi.fn(),
+    getAppInfo: vi.fn(),
     getTheme: vi.fn(),
     onTheme: vi.fn(),
   };

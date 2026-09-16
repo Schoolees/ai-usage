@@ -36,7 +36,8 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 - **Alerts.** A Windows notification when a limit crosses your warning (default 80%) or critical (default 95%) threshold, and when a busy window resets. Each alert fires once per window.
 - **Follows Windows personalization.** Dark/light mode, accent color, and Transparency effects (Mica backdrop on the settings window), updated live.
 - **Stays out of the way.** Clicks pass through everywhere except the pill and open panel. It hides automatically over fullscreen apps, can live on any display, and starts with Windows.
-- **Tray menu.** Show/hide the island, refresh now, settings, start with Windows, quit.
+- **Automatic updates.** New releases are downloaded in the background from GitHub and installed when you quit; the tray offers a restart as soon as one is ready. Turn it off in Settings → Updates.
+- **Tray menu.** Show/hide the island, refresh now, update status, settings, start with Windows, quit.
 
 ## How it gets the numbers
 
@@ -58,7 +59,7 @@ App data lives in `%APPDATA%\ai-usage\` (`settings.json`, `state.json`, `logs\ma
 
 ## Install
 
-Build the installer (see below), then run `dist\AI Usage Setup <version>.exe`. It installs per user with no admin rights.
+Download the latest `ai-usage-setup-<version>.exe` from [Releases](https://github.com/Schoolees/ai-usage/releases), or build it yourself (see below). It installs per user with no admin rights, and updates itself from then on.
 
 The installer is unsigned, so Windows SmartScreen will warn on first run. Choose **More info → Run anyway**.
 
@@ -143,7 +144,7 @@ A provider is worth adding only if it has a readable source of real rolling-wind
 - The usage endpoints are undocumented and may change.
 - Codex numbers come from local logs. They update only when you use the Codex CLI on this machine, and usage from elsewhere isn't counted.
 - The island is translucent but can't blur the desktop behind it (it has to stay a transparent click-through window).
-- The installer is unsigned and there is no auto-update.
+- The installer is unsigned, so Windows SmartScreen warns on first run (and on each update's installer).
 
 ## Testing
 

@@ -1,4 +1,4 @@
-import { Bell, Gauge, PanelTop, Plug, RefreshCw, TriangleAlert, X, type LucideIcon } from 'lucide-react';
+import { ArrowUpCircle, Bell, Gauge, PanelTop, Plug, RefreshCw, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode, type UIEvent } from 'react';
 import type { Api, DisplayOption, ProviderOption } from '../../shared/ipc';
 import { sourceLabelFromHome } from '../../shared/format';
@@ -23,6 +23,7 @@ const SECTIONS: { id: string; title: string; icon: LucideIcon }[] = [
   { id: 'island', title: 'Island', icon: PanelTop },
   { id: 'alerts', title: 'Alerts', icon: Bell },
   { id: 'refresh', title: 'Refresh', icon: RefreshCw },
+  { id: 'updates', title: 'Updates', icon: ArrowUpCircle },
 ];
 
 const PROVIDER_DESCRIPTIONS: Record<string, string> = {
@@ -73,13 +74,15 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
   const [providers, setProviders] = useState<ProviderOption[]>([]);
   const [displays, setDisplays] = useState<DisplayOption[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [version, setVersion] = useState<string | null>(null);
   const [active, setActive] = useState(SECTIONS[0].id);
 
   useEffect(() => {
-    void Promise.all([api.getSettings(), api.getProviders(), api.getDisplays()]).then(([s, p, d]) => {
+    void Promise.all([api.getSettings(), api.getProviders(), api.getDisplays(), api.getAppInfo()]).then(([s, p, d, info]) => {
       setSettings(s);
       setProviders(p);
       setDisplays(d);
+      setVersion(info.version);
     });
   }, [api]);
 
@@ -123,6 +126,7 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
           <Gauge size={14} aria-hidden />
           <span>AI Usage</span>
         </div>
+        {version && <p className="sidebar-version">Version {version}</p>}
         <nav aria-label="Settings sections">
           {SECTIONS.map(({ id, title, icon: Icon }) => (
             <button key={id} type="button" className={active === id ? 'nav-item active' : 'nav-item'} aria-current={active === id} onClick={() => goTo(id)}>
@@ -244,6 +248,15 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
             min={1}
             max={60}
             onCommit={(v) => void save({ claudeRefreshMs: v * 60_000 })}
+          />
+        </Section>
+
+        <Section id="updates" title="Updates">
+          <SwitchRow
+            label="Install updates automatically"
+            description="Download new releases in the background and install them when you quit. The tray menu offers a restart as soon as one is ready."
+            checked={settings.autoUpdate}
+            onChange={(autoUpdate) => void save({ autoUpdate })}
           />
         </Section>
 

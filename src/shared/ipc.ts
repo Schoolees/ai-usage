@@ -18,6 +18,7 @@ export const IPC = {
   settingsSet: 'settings:set',
   providersGet: 'providers:get',
   displaysGet: 'displays:get',
+  appInfoGet: 'app:info',
   themeGet: 'theme:get',
   themeUpdate: 'theme:update',
 } as const;
@@ -59,6 +60,7 @@ export interface Api {
   setSettings(patch: SettingsPatch): Promise<Settings>;
   getProviders(): Promise<ProviderOption[]>;
   getDisplays(): Promise<DisplayOption[]>;
+  getAppInfo(): Promise<{ version: string }>;
   getTheme(): Promise<SystemTheme>;
   onTheme(listener: (theme: SystemTheme) => void): () => void;
 }

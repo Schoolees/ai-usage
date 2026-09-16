@@ -24,6 +24,7 @@ const api: Api = {
   setSettings: (patch) => ipcRenderer.invoke(IPC.settingsSet, patch),
   getProviders: () => ipcRenderer.invoke(IPC.providersGet),
   getDisplays: () => ipcRenderer.invoke(IPC.displaysGet),
+  getAppInfo: () => ipcRenderer.invoke(IPC.appInfoGet),
   getTheme: () => ipcRenderer.invoke(IPC.themeGet),
   onTheme: (listener) => subscribe<[SystemTheme]>(IPC.themeUpdate, listener),
 };

@@ -20,6 +20,7 @@ import trayIcon from '../../resources/tray.ico?asset';
 import { openSettingsWindow, updateSettingsWindowTheme } from './settings-window';
 import { defaultThemeDeps, readSystemTheme } from './system-theme';
 import { createTray } from './tray';
+import { createUpdater, notifyUpdateReady } from './updater';
 import { AlertEngine } from './alert-engine';
 import { alertText } from './alert-text';
 import { showAlert } from './notifier';
@@ -156,11 +157,16 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   // detectAll() resolves, setTasks(tasks()) supplies the real tasks and starts the scheduler.
   const scheduler = new Scheduler([], onSnapshot);
 
+  // Declared before the functions that use it: settings can change (tray or IPC) while startup is
+  // still awaiting source detection, and a const declared further down would throw on access.
+  let fullscreenWatch: FullscreenWatch | null = null;
+
   function applyPlatformSettings(): void {
     if (settings.hideInFullscreen) fullscreenWatch?.start();
     else fullscreenWatch?.stop();
     // In dev the login item would point at electron.exe, so only the installed app registers itself.
     if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: settings.openAtLogin });
+    updater?.setEnabled(settings.autoUpdate);
   }
 
   function applySettings(next: Settings): Settings {
@@ -204,8 +210,16 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     }));
   });
   ipcMain.handle(IPC.displaysGet, (): DisplayOption[] => listDisplays().map(({ id, label, primary }) => ({ id, label, primary })));
+  ipcMain.handle(IPC.appInfoGet, () => ({ version: app.getVersion() }));
   ipcMain.handle(IPC.themeGet, () => theme);
   ipcMain.on(IPC.openSettings, () => openSettingsWindow(theme));
+
+  const updater = createUpdater({
+    log,
+    enabled: settings.autoUpdate,
+    onStatus: () => trayHandle?.rebuild(),
+    onReadyNotification: notifyUpdateReady,
+  });
 
   const trayHandle = createTray(trayIcon, {
     toggleIsland: () => island.toggleUserHidden(),
@@ -216,6 +230,9 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     setOpenAtLogin: (value) => {
       applySettings(mergeSettings(settings, { openAtLogin: value }));
     },
+    updateStatus: () => updater.status(),
+    checkForUpdates: () => updater.check(),
+    installUpdate: () => updater.install(),
     quit: () => app.quit(),
   });
 
@@ -251,7 +268,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     }
   })();
   // GetWindowRect reports physical pixels, so compare against the display in physical pixels too.
-  const fullscreenWatch = readForeground
+  fullscreenWatch = readForeground
     ? new FullscreenWatch(readForeground, () => screen.dipToScreenRect(null, islandDisplay().bounds), (hidden) =>
         island.setFullscreenHidden(hidden),
       )

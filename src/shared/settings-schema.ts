@@ -18,6 +18,7 @@ export const SettingsSchema = z
     alertsEnabled: z.boolean().default(true),
     hideInFullscreen: z.boolean().default(true),
     openAtLogin: z.boolean().default(true),
+    autoUpdate: z.boolean().default(true),
   })
   .refine((s) => s.warnPercent < s.criticalPercent, {
     message: 'Warning threshold must be below the critical threshold',
