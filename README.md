@@ -61,7 +61,9 @@ App data lives in `%APPDATA%\ai-usage\` (`settings.json`, `state.json`, `logs\ma
 
 Download the latest `ai-usage-setup-<version>.exe` from [Releases](https://github.com/Schoolees/ai-usage/releases), or build it yourself (see below). It installs per user with no admin rights, and updates itself from then on.
 
-The installer is unsigned, so Windows SmartScreen will warn on first run. Choose **More info → Run anyway**.
+The installer is not signed yet, so Windows SmartScreen will warn on first run: choose **More info →
+Run anyway**. Signing through [SignPath Foundation](docs/code-signing.md) is set up in the release
+workflow and switches on once the certificate is issued.
 
 You need at least one of:
 
@@ -116,9 +118,12 @@ If `node -v` on Windows prints a version below 22.12, call a newer Node explicit
 ```
 build/
   installer.nsh    custom NSIS hooks (restores a missing Start Menu shortcut on update)
+.github/workflows/
+  release.yml      builds, signs and publishes a tagged release
 scripts/
   check-sources.ts what each provider resolves to on this machine
   screenshots.ps1  captures the README screenshots from the running app
+  update-signed-metadata.mjs  rebuilds latest.yml after the installer is signed
 src/
   main/            Electron main process
     providers/     provider plugins (claude/, codex/) behind a common interface
@@ -135,6 +140,7 @@ src/
 docs/
   superpowers/specs/   design spec
   superpowers/plans/   implementation plan
+  code-signing.md
   manual-test-checklist.md
 ```
 
@@ -155,7 +161,7 @@ A provider is worth adding only if it has a readable source of real rolling-wind
 - The usage endpoints are undocumented and may change.
 - Codex numbers come from local logs. They update only when you use the Codex CLI on this machine, and usage from elsewhere isn't counted.
 - The island is translucent but can't blur the desktop behind it (it has to stay a transparent click-through window).
-- The installer is unsigned, so Windows SmartScreen warns on first run (and on each update's installer).
+- The installer is not signed yet, so Windows SmartScreen warns on first run. See [code signing](docs/code-signing.md).
 
 ## Testing
 

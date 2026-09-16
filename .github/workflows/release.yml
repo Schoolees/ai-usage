@@ -1,0 +1,110 @@
+# Builds and publishes a release. SignPath's free Foundation certificate may only sign artifacts it
+# can trace back to a build it trusts, so releases are built here rather than on a developer machine.
+#
+# Until the SignPath secrets exist the workflow still runs and publishes an unsigned installer, the
+# same as a local `npm run dist` — it just skips the signing step.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  # SignPath's connector downloads the build artifact it is asked to sign.
+  actions: read
+
+jobs:
+  release:
+    runs-on: windows-latest
+    # At job level so the signing step's own `if` can see whether the secret is set.
+    env:
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          version=$(node -p "require('./package.json').version")
+          if [ "$tag" != "$version" ]; then
+            echo "Tag v$tag does not match package.json version $version" >&2
+            exit 1
+          fi
+
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Build the installer
+        run: npx electron-builder --win --publish never
+
+      - name: Name the installer
+        id: installer
+        shell: bash
+        run: echo "name=ai-usage-setup-$(node -p "require('./package.json').version").exe" >> "$GITHUB_OUTPUT"
+
+      # SignPath signs a GitHub Actions artifact and hands the signed file back.
+      - name: Upload the unsigned installer
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: dist/${{ steps.installer.outputs.name }}
+          if-no-files-found: error
+
+      - name: Sign the installer
+        id: sign
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1800
+          output-artifact-directory: signed
+
+      # Signing rewrites the installer, so the hash electron-builder recorded no longer matches it.
+      # electron-updater checks that hash and would refuse every update if we shipped it stale.
+      - name: Take the signed installer and rebuild the update metadata
+        if: steps.sign.outcome == 'success'
+        shell: bash
+        run: |
+          cp "signed/${{ steps.installer.outputs.name }}" "dist/${{ steps.installer.outputs.name }}"
+          node scripts/update-signed-metadata.mjs dist
+
+      - name: Check the signature
+        if: steps.sign.outcome == 'success'
+        shell: pwsh
+        run: |
+          $signature = Get-AuthenticodeSignature "dist/${{ steps.installer.outputs.name }}"
+          $signature | Format-List
+          if ($signature.Status -ne 'Valid') { throw "Installer is $($signature.Status), not Valid" }
+
+      - name: Publish
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          assets=(dist/*.exe dist/*.exe.blockmap dist/latest.yml)
+          # A release may already exist with hand-written notes; only create one if it does not.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${assets[@]}" --clobber
+          else
+            gh release create "$tag" "${assets[@]}" --title "$tag" --generate-notes
+          fi
