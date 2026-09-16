@@ -126,7 +126,6 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
           <Gauge size={14} aria-hidden />
           <span>AI Usage</span>
         </div>
-        {version && <p className="sidebar-version">Version {version}</p>}
         <nav aria-label="Settings sections">
           {SECTIONS.map(({ id, title, icon: Icon }) => (
             <button key={id} type="button" className={active === id ? 'nav-item active' : 'nav-item'} aria-current={active === id} onClick={() => goTo(id)}>
@@ -135,6 +134,7 @@ export function SettingsApp({ api = window.api }: { api?: Api }) {
             </button>
           ))}
         </nav>
+        {version && <p className="sidebar-version">Version {version}</p>}
       </aside>
 
       <div className="main">

@@ -152,7 +152,10 @@ describe('SettingsApp', () => {
     const api = fakeApi();
     await renderSettings(api);
 
-    expect(screen.getByText(/version 1\.2\.3/i)).toBeTruthy();
+    const versionLine = screen.getByText(/version 1\.2\.3/i);
+    const nav = screen.getByRole('navigation', { name: 'Settings sections' });
+    // The menu stays at the top; the version sits below it.
+    expect(nav.compareDocumentPosition(versionLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByRole('switch', { name: 'Install updates automatically' }));
     });

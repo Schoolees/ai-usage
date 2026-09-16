@@ -109,6 +109,7 @@ select {
   font-size: 12px;
 }
 
+/* Sits at the bottom of the sidebar; `margin-top: auto` only pushes correctly as the last child. */
 .sidebar-version {
   margin: auto 0 12px;
   padding: 0 16px;
