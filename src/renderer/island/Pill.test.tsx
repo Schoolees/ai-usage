@@ -11,6 +11,7 @@ describe('Pill', () => {
     render(<Pill providers={[claude, codex]} expanded={false} onHoverStart={() => {}} onHoverEnd={() => {}} />);
     expect(screen.getByTestId('pill-claude').querySelector('.pill-text')?.textContent).toBe('Claude 73%');
     expect(screen.getByTestId('pill-claude-plan').textContent).toBe('MAX');
+    expect(screen.getByTestId('pill-claude-plan').getAttribute('title')).toBeNull();
     expect(screen.getByTestId('pill-codex-plan').textContent).toBe('PRO LITE');
     expect(screen.getByTestId('pill-claude').dataset.state).toBe('normal');
     expect(screen.getByTestId('pill-codex').dataset.state).toBe('critical');

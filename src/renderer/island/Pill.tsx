@@ -50,7 +50,7 @@ export function Pill({ providers, expanded, onHoverStart, onHoverEnd }: PillProp
               {provider.headlinePercent === null ? provider.shortName : `${provider.shortName} ${Math.floor(provider.headlinePercent)}%`}
             </span>
             {badge && (
-              <span className="plan-badge" data-testid={`pill-${provider.id}-plan`} title={provider.plan}>
+              <span className="plan-badge" data-testid={`pill-${provider.id}-plan`}>
                 {badge}
               </span>
             )}
