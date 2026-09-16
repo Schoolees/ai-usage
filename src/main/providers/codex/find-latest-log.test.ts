@@ -35,7 +35,13 @@ describe('findLatestLogs', () => {
     expect(logs[0]).toMatchObject({ mtimeMs: 3_000_000, size: 2 });
   });
 
-  it('only scans the most recent day folders', async () => {
+  it('finds a recently written log in an old day folder (a long-running session keeps its original folder)', async () => {
+    for (let day = 1; day <= 20; day++) writeLog(`2026/09/${String(day).padStart(2, '0')}`, 'rollout-session.jsonl', 'older', 1_000 + day);
+    const resumed = writeLog('2026/06/09', 'rollout-old-session.jsonl', 'resumed today', 9_000);
+    expect((await findLatestLogs(root))[0].path).toBe(resumed);
+  });
+
+  it('can be limited to the most recent day folders', async () => {
     writeLog('2026/09/14', 'rollout-old.jsonl', 'x', 5_000);
     const recent = writeLog('2026/09/15', 'rollout-new.jsonl', 'y', 4_000);
     expect((await findLatestLogs(root, 1)).map((l) => l.path)).toEqual([recent]);

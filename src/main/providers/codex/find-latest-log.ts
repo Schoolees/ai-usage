@@ -19,8 +19,16 @@ async function numericDirsDesc(dir: string): Promise<string[]> {
   }
 }
 
-/** Newest `rollout-*.jsonl` files under <sessionsDir>/YYYY/MM/DD, looking at the last `maxDayDirs` day folders. */
-export async function findLatestLogs(sessionsDir: string, maxDayDirs = 14, maxFiles = 5): Promise<LogFile[]> {
+/** Stop walking after this many files, so a huge sessions folder can't stall a poll. */
+const MAX_FILES_SCANNED = 5000;
+
+/**
+ * Newest `rollout-*.jsonl` files under <sessionsDir>/YYYY/MM/DD, by modified time.
+ *
+ * Every day folder is scanned by default: Codex keeps appending to a session's original folder, so a
+ * session started months ago and resumed today holds the freshest numbers while sitting in an old folder.
+ */
+export async function findLatestLogs(sessionsDir: string, maxDayDirs = Number.POSITIVE_INFINITY, maxFiles = 5): Promise<LogFile[]> {
   const dayDirs: string[] = [];
   outer: for (const year of await numericDirsDesc(sessionsDir)) {
     for (const month of await numericDirsDesc(join(sessionsDir, year))) {
@@ -33,6 +41,7 @@ export async function findLatestLogs(sessionsDir: string, maxDayDirs = 14, maxFi
 
   const files: LogFile[] = [];
   for (const dir of dayDirs) {
+    if (files.length >= MAX_FILES_SCANNED) break;
     let names: string[];
     try {
       names = await readdir(dir);

@@ -67,6 +67,43 @@ describe('createCodexPlugin', () => {
     expect((await createCodexPlugin().fetch(source, now)).limits[0].usedPercent).toBe(7);
   });
 
+  it('uses the newest log by modified time even when it sits in an old day folder', async () => {
+    for (let day = 1; day <= 20; day++) writeRollout(`2026/09/${String(day).padStart(2, '0')}`, 'rollout-session.jsonl', 11, 1_000 + day);
+    writeRollout('2026/06/09', 'rollout-resumed.jsonl', 78, 9_000);
+    expect((await createCodexPlugin().fetch(source, now)).limits[0].usedPercent).toBe(78);
+  });
+
+  it('prefers the session Codex marks as current in its index, over the newest file', async () => {
+    const currentId = '019ea8f3-383f-7ff1-9adf-085c81924550';
+    writeRollout('2026/06/09', `rollout-2026-06-09T04-36-12-${currentId}.jsonl`, 78, 1_000);
+    writeRollout('2026/09/15', 'rollout-2026-09-15T06-42-26-01a0a3cc-41b6-7dc0-901c-5e4333730835.jsonl', 11, 9_000);
+    writeFileSync(
+      join(home, '.codex', 'session_index.jsonl'),
+      `{"id":"01a0a3cc-41b6-7dc0-901c-5e4333730835","updated_at":"2026-09-15T06:42:26.0Z"}\n{"id":"${currentId}","updated_at":"2026-09-16T01:43:13.9Z"}\n`,
+    );
+    expect((await createCodexPlugin().fetch(source, now)).limits[0].usedPercent).toBe(78);
+  });
+
+  it('reports an error when the newest log is fresh but holds no recent usage record', async () => {
+    // Codex is writing right now, yet the newest rate-limit record we can parse is days old:
+    // the log format has probably moved on, so say so instead of showing stale numbers as current.
+    const dir = join(home, '.codex', 'sessions', '2026', '09', '15');
+    mkdirSync(dir, { recursive: true });
+    const path = join(dir, 'rollout-live.jsonl');
+    writeFileSync(
+      path,
+      `${JSON.stringify({
+        timestamp: '2026-09-10T08:00:00.000Z', // days older than the file itself
+        type: 'event_msg',
+        payload: { type: 'token_count', rate_limits: { primary: { used_percent: 42, window_minutes: 300, resets_at: 1789999200 }, secondary: null, plan_type: 'plus' } },
+      })}\n`,
+    );
+    utimesSync(path, now / 1000, now / 1000);
+    const snapshot = await createCodexPlugin().fetch(source, now);
+    expect(snapshot.status).toBe('error');
+    expect(snapshot.message).toMatch(/current usage/i);
+  });
+
   it('returns not-found when there are no logs', async () => {
     const snapshot = await createCodexPlugin().fetch(source, now);
     expect(snapshot).toMatchObject({ providerId: 'codex', status: 'not-found', limits: [], message: 'No Codex logs in Local' });
