@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="settings.css" />
+    <style>
+      html { height: 100%; background: linear-gradient(135deg, #1b1446, #5b1d7a 55%, #2b0f3a) fixed; }
+      body { display: grid; place-items: center; height: 100vh; margin: 0; background: transparent; }
+      /* Stands in for the Windows window frame the real app gets. */
+      #root {
+        width: 780px;
+        height: 560px;
+        overflow: hidden;
+        border: 1px solid rgb(255 255 255 / 12%);
+        border-radius: 9px;
+        box-shadow: 0 30px 80px rgb(0 0 0 / 55%);
+      }
+      #root .app { height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="settings.js"></script>
+  </body>
+</html>

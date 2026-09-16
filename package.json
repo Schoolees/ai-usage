@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "check:sources": "node scripts/check-sources.mjs",
     "icons": "node scripts/make-icons.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
     "dist": "electron-vite build && electron-builder --win"
   },
   "dependencies": {

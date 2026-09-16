@@ -20,13 +20,13 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
   <img src="docs/screenshots/panel.png" alt="Expanded panel with Claude 5-hour, weekly and per-model weekly limits, and Codex 5-hour and weekly limits" width="75%">
 </p>
 
-**Settings.** Providers and their sources, island display, alerts and refresh, following the Windows theme, accent color and Mica.
+**Settings.** Providers and their sources, island display, alerts, refresh and updates, following the Windows theme, accent color and Mica.
 
 <p align="center">
-  <img src="docs/screenshots/settings.png" alt="Settings window with sidebar sections, provider switches and source dropdowns" width="75%">
+  <img src="docs/screenshots/settings.png" alt="Settings window with Providers, Island, Alerts, Refresh and Updates in the sidebar, and provider switches and source dropdowns" width="75%">
 </p>
 
-<p align="center"><sub>Screenshots are rendered with sample data.</sub></p>
+<p align="center"><sub>Screenshots are rendered from the real components with sample data: <code>npm run screenshots</code>.</sub></p>
 
 ## Features
 
@@ -81,7 +81,12 @@ npm run build        # bundle to out/
 npm run dist         # build the Windows NSIS installer into dist/
 npm run icons        # regenerate build/icon.ico and resources/tray.ico
 npm run check:sources # print what each provider resolves to on this machine
+npm run screenshots  # re-render docs/screenshots/*.png from the components
 ```
+
+`screenshots` renders `scripts/screenshots/` (the real island and settings components, fed sample
+data) in a headless Chromium and writes the three README images. It uses Playwright's cached browser
+if there is one; otherwise set `CHROME` to a Chromium or Chrome binary.
 
 `check:sources` lists every detected source with the data it yields (status, plan, age, limits). Run it
 before a release, or whenever a number looks wrong: it catches provider format drift directly, instead of
@@ -110,6 +115,9 @@ If `node -v` on Windows prints a version below 22.12, call a newer Node explicit
 ```
 build/
   installer.nsh    custom NSIS hooks (restores a missing Start Menu shortcut on update)
+scripts/
+  check-sources.ts what each provider resolves to on this machine
+  screenshots/     README screenshots, rendered from the real components
 src/
   main/            Electron main process
     providers/     provider plugins (claude/, codex/) behind a common interface
