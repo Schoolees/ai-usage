@@ -79,7 +79,12 @@ npm run typecheck    # tsc for main/preload and renderer
 npm run build        # bundle to out/
 npm run dist         # build the Windows NSIS installer into dist/
 npm run icons        # regenerate build/icon.ico and resources/tray.ico
+npm run check:sources # print what each provider resolves to on this machine
 ```
+
+`check:sources` lists every detected source with the data it yields (status, plan, age, limits). Run it
+before a release, or whenever a number looks wrong: it catches provider format drift directly, instead of
+waiting for a wrong number to show up in the island.
 
 ### Working from WSL
 
@@ -126,7 +131,8 @@ Pure logic (parsers, scheduler, alerts, view model, theme) has no Electron impor
 ## Adding a provider
 
 1. Create `src/main/providers/<id>/` with a `plugin.ts` implementing `ProviderPlugin` (`src/main/providers/types.ts`): `detectSources`, `fetch`, interval, and staleness.
-2. Put parsing in its own module with fixture-based tests. `fetch` must return a non-ok status instead of throwing for expected failures.
+2. Put parsing in its own module with fixture-based tests; keep a sample of each odd real-world shape you meet in a `fixtures/` folder (see `src/main/providers/codex/fixtures/`). `fetch` must return a non-ok status instead of throwing for expected failures.
+   Prefer whatever the provider itself treats as authoritative (an index, an API) over incidental structure like folder names or file times, and report a non-ok status when the two disagree.
 3. Register it in `src/main/providers/index.ts`.
 
 A provider is worth adding only if it has a readable source of real rolling-window limits (not just spend).

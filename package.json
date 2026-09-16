@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:sources": "node scripts/check-sources.mjs",
     "icons": "node scripts/make-icons.mjs",
     "dist": "electron-vite build && electron-builder --win"
   },
