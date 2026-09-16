@@ -15,12 +15,13 @@ describe('loginCommand', () => {
 
   it('uses each provider\u2019s own sign-in command', () => {
     expect(loginCommand('codex', wsl)?.args[5]).toContain('codex login');
-    expect(loginCommand('codex', windows)).toEqual({ file: 'cmd.exe', args: ['/k', 'codex login'] });
+    expect(loginCommand('codex', windows)).toEqual({ file: 'cmd.exe', args: ['/c', 'codex login || pause'] });
   });
 
-  it('keeps the window up after the CLI exits, so a failure can be read', () => {
-    expect(loginCommand('claude', wsl)?.args[5]).toMatch(/read -rp/);
-    expect(loginCommand('claude', windows)?.args[0]).toBe('/k');
+  it('closes the window after a successful sign-in, and keeps it up only when the CLI fails', () => {
+    // `a || b` runs b only when a exits non-zero, so success closes the console straight away.
+    expect(loginCommand('claude', wsl)?.args[5]).toMatch(/^claude auth login \|\| \{ .*read -rp .*; \}$/);
+    expect(loginCommand('claude', windows)).toEqual({ file: 'cmd.exe', args: ['/c', 'claude auth login || pause'] });
   });
 
   it('passes a distro name as one argument, spaces and all', () => {

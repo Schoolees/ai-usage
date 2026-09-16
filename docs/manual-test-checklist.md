@@ -41,7 +41,8 @@ Run against the installed build (`dist\AI Usage Setup <version>.exe`). Tick each
 - [ ] The sign-in icon beside each provider opens a console window titled with `wsl.exe` (WSL source) or `cmd` (Windows source).
 - [ ] The console runs `claude auth login` / `codex login` and shows the sign-in URL; the browser flow completes.
 - [ ] Within a minute of finishing, the island shows the new account's plan and usage.
-- [ ] Signing in to a different account works without logging out first. If a CLI refuses because a session exists, note it: the app would then need to run `logout` first.
+- [ ] Signing in to a different account works without logging out first (confirmed for both CLIs in 0.1.6).
+- [ ] The console closes by itself after a successful sign-in; after a failed or cancelled one it stays open with "Sign-in failed. Press Enter to close…".
 - [ ] Closing the console without signing in leaves the previous account signed in, and MCP server logins intact.
 - [ ] Tray → **Switch account** lists only providers with a detected source, and is disabled when there are none — including straight after launch, once detection finishes.
 
