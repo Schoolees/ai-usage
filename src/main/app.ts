@@ -162,7 +162,10 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
       });
       for (const event of events) {
         const providerName = plugins.find((plugin) => plugin.id === event.providerId)?.name ?? event.providerId;
-        showAlert(alertText(event, providerName, now), () => island.expand());
+        const text = alertText(event, providerName, now);
+        // Logged so "a notification showed up" can always be traced back to what and why.
+        log.info(`alert: ${text.title} — ${text.body}`);
+        showAlert(text, () => island.expand());
       }
     }
     if (snapshot.status === 'error') log.warn(`${snapshot.providerId}: ${snapshot.message ?? 'error'}`);
