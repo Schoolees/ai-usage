@@ -1,6 +1,6 @@
 {
   "name": "ai-usage",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "description": "Notch-style island showing AI subscription plan usage limits",
   "author": "Schoolees",
