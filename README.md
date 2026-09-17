@@ -33,11 +33,11 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 - **Island at the top of the screen.** A small always-on-top pill shows each provider's 5-hour usage and plan (`MAX`, `PRO`, `PLUS`). Hover to expand a panel with every limit, a progress bar, and reset time ("Resets in 2 hr 8 min", "Resets Mon 1:00 PM").
 - **Claude and Codex.** Claude's 5-hour, weekly, and per-model weekly limits; Codex's 5-hour and weekly limits.
 - **Windows and WSL.** Finds CLI logins and logs in `%USERPROFILE%` and in every *running* WSL distro. It never starts a stopped distro. You can pick the source in Settings.
-- **Alerts.** A Windows notification when a limit crosses your warning (default 80%) or critical (default 95%) threshold, and when a busy window resets. Each alert fires once per window.
+- **Alerts.** A Windows notification when a limit crosses your warning (default 80%) or critical (default 95%) threshold, and when a busy window resets. Each alert fires once per window, and every one is written to the log.
 - **Follows Windows personalization.** Dark/light mode, accent color, and Transparency effects (Mica backdrop on the settings window), updated live.
 - **Stays out of the way.** Clicks pass through everywhere except the pill and open panel. It hides automatically over fullscreen apps, can live on any display, and starts with Windows.
-- **Automatic updates.** New releases are downloaded in the background from GitHub and installed when you quit, restarting into the new version; the tray offers a restart as soon as one is ready. Turn it off in Settings → Updates.
-- **Switch accounts.** The sign-in icon next to each provider (or **Switch account** in the tray) opens a console running that CLI's own sign-in — `claude auth login` or `codex login` — in the Windows home or WSL distro the app is reading. Finish the browser flow and the island picks up the new account. AI Usage never reads or stores the credentials; the CLI does the signing in.
+- **Automatic updates.** New releases download in the background from GitHub. The tray offers **Restart to update** as soon as one is ready, or it installs when you quit. Either way the installer shows its progress, AI Usage reopens by itself, and a notification confirms the new version. Turn it off in Settings → Updates.
+- **Switch accounts.** The sign-in icon next to each provider (or **Switch account** in the tray) opens a console running that CLI's own sign-in — `claude auth login` or `codex login` — in the Windows home or WSL distro the app is reading. Finish the browser flow and the console closes; the island shows the new account within a minute. If the sign-in fails, the console stays open so you can read why. There's no logout step: signing in replaces the current account, and your MCP server logins are left alone.
 - **Tray menu.** Show/hide the island, refresh now, update status, switch account, settings, start with Windows, quit.
 
 ## How it gets the numbers
@@ -54,13 +54,16 @@ Neither usage source is a documented public API. They can change without notice,
 - Tokens are read only by the Electron main process. They never reach the UI, logs, or any file the app writes.
 - The Claude token is sent only to Anthropic's API. Nothing is sent anywhere else, and there is no telemetry.
 - The app **never refreshes or rewrites** CLI tokens, so it can't sign your CLI out. When a token expires, the island shows "Login expired · run claude to refresh" until Claude Code refreshes it.
+- Switching accounts only starts the CLI's own sign-in. AI Usage never sees or stores the new credentials.
 - Log output passes through a redaction filter that removes bearer tokens, API keys, and JWTs.
 
 App data lives in `%APPDATA%\ai-usage\` (`settings.json`, `state.json`, `logs\main.log`).
 
 ## Install
 
-Download the latest `ai-usage-setup-<version>.exe` from [Releases](https://github.com/Schoolees/ai-usage/releases), or build it yourself (see below). The setup wizard lets you pick the install folder and start the app when it finishes. It installs for your Windows account only, with no admin rights, and updates itself from then on.
+Download the latest `ai-usage-setup-<version>.exe` from [Releases](https://github.com/Schoolees/ai-usage/releases), or build it yourself (see below). The setup wizard lets you pick the install folder (default `%LOCALAPPDATA%\Programs\ai-usage`), adds Start Menu and desktop shortcuts, and can start the app when it finishes.
+
+It installs for your Windows account only, with no admin rights. That is deliberate: AI Usage reads your own CLI logins, and a machine-wide install would ask for permission on every automatic update.
 
 The installer is not signed yet, so Windows SmartScreen will warn on first run: choose **More info →
 Run anyway**. Signing through [SignPath Foundation](docs/code-signing.md) is set up in the release
@@ -73,7 +76,7 @@ You need at least one of:
 
 ## Development
 
-Requirements: Node.js **22.12+** (the build tools don't run on older Node), npm, Windows 10/11 to run the app.
+Requirements: Node.js **22.12+** (the build tools don't run on older Node; CI uses 24), npm, Windows 10/11 to run the app.
 
 ```bash
 npm install
@@ -95,6 +98,21 @@ desktop and your plan usage look like at the time: check them before committing.
 `check:sources` lists every detected source with the data it yields (status, plan, age, limits). Run it
 before a release, or whenever a number looks wrong: it catches provider format drift directly, instead of
 waiting for a wrong number to show up in the island.
+
+### Releasing
+
+Releases are built by GitHub Actions, not on a developer machine ([`release.yml`](.github/workflows/release.yml)). Bump the version, commit, and push a tag:
+
+```bash
+npm version 0.1.11 --no-git-tag-version
+git commit -am "chore(release): v0.1.11"
+git tag -a v0.1.11 -m "v0.1.11"
+git push origin main v0.1.11
+```
+
+The workflow checks that the tag matches `package.json`, runs the typecheck and tests, builds the installer, signs it once SignPath is set up (see [code signing](docs/code-signing.md)), and attaches the installer, its blockmap and `latest.yml` to the release. Installed copies pick it up within six hours, or at their next start.
+
+Anything that changes the installer after electron-builder has run must be followed by `scripts/update-signed-metadata.mjs`. electron-updater rejects a download whose hash doesn't match `latest.yml`, so a stale one breaks updates for everyone.
 
 ### Working from WSL
 
@@ -118,7 +136,7 @@ If `node -v` on Windows prints a version below 22.12, call a newer Node explicit
 
 ```
 build/
-  installer.nsh    custom NSIS hooks (restores a missing Start Menu shortcut on update)
+  installer.nsh    NSIS hooks: per-user wizard, update flow, Start Menu shortcut repair
 .github/workflows/
   release.yml      builds, signs and publishes a tagged release
 scripts/
@@ -132,6 +150,8 @@ src/
     app.ts         composition root: scheduler, store, alerts, IPC, tray, windows
     island-window.ts, settings-window.ts, tray.ts, notifier.ts
     scheduler.ts, usage-store.ts, alert-engine.ts, system-theme.ts, redact.ts
+    updater.ts     electron-updater wrapper: checks, visible install, restart
+    switch-account.ts  opens the CLI's own sign-in for a provider's source
   preload/         typed contextBridge API (window.api)
   renderer/
     island/        pill + panel (React)
@@ -160,7 +180,8 @@ A provider is worth adding only if it has a readable source of real rolling-wind
 
 - Windows only. No macOS or Linux build.
 - The usage endpoints are undocumented and may change.
-- Codex numbers come from local logs. They update only when you use the Codex CLI on this machine, and usage from elsewhere isn't counted.
+- Codex numbers come from local logs. They update only when Codex runs on this machine, and usage from elsewhere isn't counted. A thread you reopen shows its last known numbers until the model's first reply brings fresh ones.
+- Switching accounts needs the browser sign-in each time; AI Usage doesn't keep a list of accounts.
 - The island is translucent but can't blur the desktop behind it (it has to stay a transparent click-through window).
 - The installer is not signed yet, so Windows SmartScreen warns on first run. See [code signing](docs/code-signing.md).
 
