@@ -60,7 +60,7 @@ App data lives in `%APPDATA%\ai-usage\` (`settings.json`, `state.json`, `logs\ma
 
 ## Install
 
-Download the latest `ai-usage-setup-<version>.exe` from [Releases](https://github.com/Schoolees/ai-usage/releases), or build it yourself (see below). It installs per user with no admin rights, and updates itself from then on.
+Download the latest `ai-usage-setup-<version>.exe` from [Releases](https://github.com/Schoolees/ai-usage/releases), or build it yourself (see below). The setup wizard lets you pick the install folder and start the app when it finishes. It installs for your Windows account only, with no admin rights, and updates itself from then on.
 
 The installer is not signed yet, so Windows SmartScreen will warn on first run: choose **More info →
 Run anyway**. Signing through [SignPath Foundation](docs/code-signing.md) is set up in the release

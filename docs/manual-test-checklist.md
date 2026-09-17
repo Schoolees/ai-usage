@@ -46,10 +46,16 @@ Run against the installed build (`dist\AI Usage Setup <version>.exe`). Tick each
 - [ ] Closing the console without signing in leaves the previous account signed in, and MCP server logins intact.
 - [ ] Tray → **Switch account** lists only providers with a detected source, and is disabled when there are none — including straight after launch, once detection finishes.
 
+## Installer
+- [ ] A fresh install opens on "Choose Install Location" (default `%LOCALAPPDATA%\Programs\ai-usage`), with no "who is this for" page first.
+- [ ] Back from that page shows "Choose Installation Options" with "Only for me" selected; Next returns to the folder page. The installer does not quit.
+- [ ] The Finish page reads "Completing AI Usage Setup" with "Run AI Usage" ticked; Finish starts the app.
+- [ ] Start Menu and desktop shortcuts both exist afterwards.
+
 ## Updates
 Install an older version, then publish/point at a newer one.
 - [ ] Tray shows "Downloading update X…", then "Restart to update to X"; clicking it restarts into the new version.
-- [ ] Restarting or quitting with an update ready shows the "AI Usage Setup" progress window, then the app comes back by itself at the new version.
+- [ ] Restarting or quitting with an update ready shows the "AI Usage Setup" progress window with no folder page and no Finish page, then the app comes back by itself at the new version.
 - [ ] After that restart an "AI Usage updated to X" notification appears, once; restarting again does not repeat it.
 - [ ] After that update the Start Menu entry still exists — delete `%APPDATA%\Microsoft\Windows\Start Menu\Programs\AI Usage.lnk`, update again, and it is recreated.
 - [ ] Apps & features lists exactly one "AI Usage" entry, at the installed version.

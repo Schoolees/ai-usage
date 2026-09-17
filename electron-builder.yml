@@ -21,9 +21,14 @@ win:
       arch: [x64]
   icon: build/icon.ico
 nsis:
-  oneClick: true
+  # The same wizard as SchooleesPulse: an install-location page and a finish page with "Run".
+  # Unlike SchooleesPulse it stays per-user. AI Usage reads the signed-in user's CLI logins, and a
+  # per-machine install would ask for admin rights on every automatic update. build/installer.nsh
+  # skips the "who is this for" page that a per-user assisted installer would otherwise show.
+  oneClick: false
   perMachine: false
-  createDesktopShortcut: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: AI Usage
   runAfterFinish: true
