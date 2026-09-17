@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findLastRateLimits } from '../parse';
+import { findLastRateLimits, newestTokenCountMs } from '../parse';
 
 /**
  * A corpus of real log shapes seen in the wild (with synthetic numbers). Each one caused a bug once;
@@ -23,5 +23,14 @@ describe('Codex log fixtures', () => {
       primary: { usedPercent: 78, windowMinutes: 300 },
       secondary: { usedPercent: 33, windowMinutes: 10080 },
     });
+  });
+
+  it('reads a thread reopened hours later, before the model has replied', () => {
+    // Reopening appends context records straight away; usage only arrives with the first response.
+    const jsonl = read('resumed-thread.jsonl');
+    const record = findLastRateLimits(jsonl);
+    expect(record).toMatchObject({ primary: { usedPercent: 56 }, secondary: { usedPercent: 49 } });
+    // Nothing newer is accounting tokens yet, so the old record is simply the latest there is.
+    expect(newestTokenCountMs(jsonl)).toBe(record?.timestampMs);
   });
 });

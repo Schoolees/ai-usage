@@ -84,21 +84,39 @@ describe('createCodexPlugin', () => {
     expect((await createCodexPlugin().fetch(source, now)).limits[0].usedPercent).toBe(78);
   });
 
-  it('reports an error when the newest log is fresh but holds no recent usage record', async () => {
-    // Codex is writing right now, yet the newest rate-limit record we can parse is days old:
-    // the log format has probably moved on, so say so instead of showing stale numbers as current.
+  function writeLive(records: object[]): void {
     const dir = join(home, '.codex', 'sessions', '2026', '09', '15');
     mkdirSync(dir, { recursive: true });
     const path = join(dir, 'rollout-live.jsonl');
-    writeFileSync(
-      path,
-      `${JSON.stringify({
-        timestamp: '2026-09-10T08:00:00.000Z', // days older than the file itself
-        type: 'event_msg',
-        payload: { type: 'token_count', rate_limits: { primary: { used_percent: 42, window_minutes: 300, resets_at: 1789999200 }, secondary: null, plan_type: 'plus' } },
-      })}\n`,
-    );
+    writeFileSync(path, records.map((record) => `${JSON.stringify(record)}\n`).join(''));
     utimesSync(path, now / 1000, now / 1000);
+  }
+
+  const readable = (timestamp: string) => ({
+    timestamp,
+    type: 'event_msg',
+    payload: { type: 'token_count', rate_limits: { primary: { used_percent: 42, window_minutes: 300, resets_at: 1789999200 }, secondary: null, plan_type: 'plus' } },
+  });
+
+  it('shows the last usage for a thread reopened hours later, before the model replies', async () => {
+    // The file was just written to, but only with context records: no newer usage exists yet.
+    writeLive([
+      readable('2026-09-14T20:00:00.000Z'),
+      { timestamp: '2026-09-15T08:59:50.000Z', type: 'turn_context', payload: {} },
+      { timestamp: '2026-09-15T08:59:50.100Z', type: 'event_msg', payload: { type: 'task_started' } },
+    ]);
+    const snapshot = await createCodexPlugin().fetch(source, now);
+    expect(snapshot.status).toBe('ok');
+    expect(snapshot.dataAsOf).toBe(Date.parse('2026-09-14T20:00:00.000Z'));
+  });
+
+  it('reports an error when Codex keeps recording usage in a shape it cannot read', async () => {
+    // Fresh token_count records whose rate limits don't parse, hours after the last readable one:
+    // the log format has moved on, so say so instead of showing stale numbers as current.
+    writeLive([
+      readable('2026-09-14T20:00:00.000Z'),
+      { timestamp: '2026-09-15T08:58:00.000Z', type: 'event_msg', payload: { type: 'token_count', rate_limits: { windows: [{ pct: 50 }] } } },
+    ]);
     const snapshot = await createCodexPlugin().fetch(source, now);
     expect(snapshot.status).toBe('error');
     expect(snapshot.message).toMatch(/current usage/i);

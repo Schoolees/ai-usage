@@ -63,6 +63,29 @@ export function findLastRateLimits(jsonl: string): CodexRateLimitRecord | null {
   return null;
 }
 
+/**
+ * When Codex last recorded token usage, whether or not we could read the rate limits on that record.
+ * Compared with the newest readable record it separates a format change (Codex keeps accounting,
+ * we can't read it) from a quiet thread (nothing new to read yet).
+ */
+export function newestTokenCountMs(jsonl: string): number | null {
+  const lines = jsonl.split('\n');
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (!line.includes('"token_count"')) continue;
+    let event: Json | null;
+    try {
+      event = asObject(JSON.parse(line));
+    } catch {
+      continue;
+    }
+    if (asObject(event?.payload)?.type !== 'token_count' || typeof event?.timestamp !== 'string') continue;
+    const timestampMs = Date.parse(event.timestamp);
+    if (!Number.isNaN(timestampMs)) return timestampMs;
+  }
+  return null;
+}
+
 export function codexSnapshot(record: CodexRateLimitRecord, source: Source, now: number): Snapshot {
   const limits: Limit[] = [];
   for (const window of [record.primary, record.secondary]) {

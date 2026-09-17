@@ -4,7 +4,7 @@ import type { DetectedSource, Snapshot, Source } from '../../../shared/types';
 import type { ProviderPlugin } from '../types';
 import { findLatestLogs, readTail, type LogFile } from './find-latest-log';
 import { findIndexedLog } from './session-index';
-import { codexSnapshot, findLastRateLimits, type CodexRateLimitRecord } from './parse';
+import { codexSnapshot, findLastRateLimits, newestTokenCountMs, type CodexRateLimitRecord } from './parse';
 
 function sessionsDir(home: string): string {
   return join(home, '.codex', 'sessions');
@@ -64,11 +64,15 @@ export function createCodexPlugin(): ProviderPlugin {
 
       for (const log of logs) {
         try {
-          const record = findLastRateLimits(await readTail(log));
+          const tail = await readTail(log);
+          const record = findLastRateLimits(tail);
           if (record) {
-            // A live log whose newest usage record is hours older than the file means the format moved
-            // on and we are reading the wrong records: say so rather than presenting stale numbers.
-            if (now - log.mtimeMs < FRESH_LOG_MS && log.mtimeMs - record.timestampMs > RECORD_LAG_MS) {
+            // Codex recording usage right now that we cannot read, hours after the last record we
+            // could, means the format moved on: say so rather than present stale numbers as current.
+            // The file's own mtime is no evidence of that: reopening an old thread writes context
+            // records immediately, and usage only follows with the model's first reply.
+            const accountedAt = newestTokenCountMs(tail);
+            if (accountedAt !== null && now - accountedAt < FRESH_LOG_MS && accountedAt - record.timestampMs > RECORD_LAG_MS) {
               return {
                 providerId: 'codex',
                 source,

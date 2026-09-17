@@ -1,0 +1,8 @@
+{"timestamp":"2026-09-16T13:45:06.910Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"limit_id":"codex","limit_name":null,"primary":{"used_percent":55,"window_minutes":300,"resets_at":1789581391},"secondary":{"used_percent":49,"window_minutes":10080,"resets_at":1790059380},"plan_type":"plus"}}}
+{"timestamp":"2026-09-16T13:45:28.128Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"limit_id":"codex","limit_name":null,"primary":{"used_percent":56,"window_minutes":300,"resets_at":1789581391},"secondary":{"used_percent":49,"window_minutes":10080,"resets_at":1790059380},"plan_type":"plus"}}}
+{"timestamp":"2026-09-16T13:45:28.140Z","type":"event_msg","payload":{"type":"task_complete"}}
+{"timestamp":"2026-09-17T03:01:03.026Z","type":"response_item","payload":{"type":"message","role":"user","content":[]}}
+{"timestamp":"2026-09-17T03:01:03.033Z","type":"world_state","payload":{}}
+{"timestamp":"2026-09-17T03:01:03.044Z","type":"turn_context","payload":{}}
+{"timestamp":"2026-09-17T03:01:03.302Z","type":"event_msg","payload":{"type":"thread_settings_applied"}}
+{"timestamp":"2026-09-17T03:01:03.460Z","type":"event_msg","payload":{"type":"task_started"}}
