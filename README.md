@@ -1,10 +1,18 @@
 # AI Usage
 
+[![Latest release](https://img.shields.io/github/v/release/Schoolees/ai-usage?display_name=tag&sort=semver&label=latest%20release)](https://github.com/Schoolees/ai-usage/releases/latest)
+[![Release workflow](https://github.com/Schoolees/ai-usage/actions/workflows/release.yml/badge.svg)](https://github.com/Schoolees/ai-usage/actions/workflows/release.yml)
+[![Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](#install)
+[![Node.js 22.12+](https://img.shields.io/badge/Node.js-22.12%2B-339933?logo=node.js&logoColor=white)](#development)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 A notch-style island for Windows that shows your **Claude** and **ChatGPT/Codex** plan usage limits: the 5-hour and weekly windows, at the top of your screen. Hover the pill to see every limit, when it resets, and how close you are.
 
 It reads the logins and logs that the Claude Code and Codex CLIs already keep on your machine, in the Windows home folder and in running WSL distros. It follows your Windows theme and accent color, and alerts you before you hit a limit.
 
-> Status: early (v0.1). Windows 10/11 only.
+> Early release. Windows 10/11 only.
+
+[Download the latest release](https://github.com/Schoolees/ai-usage/releases/latest) · [Report an issue](https://github.com/Schoolees/ai-usage/issues)
 
 ## Screenshots
 
