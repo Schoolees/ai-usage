@@ -53,7 +53,7 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 | Provider | Source | Refresh |
 |---|---|---|
 | Claude | Access token from Claude Code's login (`<home>/.claude/.credentials.json`), used to call the same usage endpoint Claude Code's `/usage` uses | Every 2 minutes (configurable, minimum 1) |
-| ChatGPT / Codex | Codex's local app-server `account/rateLimits/read` endpoint, with session logs as a fallback (`<home>/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`) | Checked every 30 seconds; app-server reads the current account snapshot directly |
+| ChatGPT / Codex | Codex's local app-server `account/rateLimits/read` endpoint, with session logs as a fallback (`<home>/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`). On Windows, `codex` is found on `PATH`, whether it is a native `codex.exe` or npm's `codex.cmd`. | Checked every 30 seconds; app-server reads the current account snapshot directly |
 
 Neither usage source is a documented public API. They can change without notice, and the app shows an error or "stale" state rather than a wrong number when they do.
 
@@ -68,6 +68,14 @@ Claude Pro/Max and Claude.ai Team/Enterprise seats use the Claude Code OAuth log
 - Log output passes through a redaction filter that removes bearer tokens, API keys, and JWTs.
 
 App data lives in `%APPDATA%\ai-usage\` (`settings.json`, `state.json`, `logs\main.log`).
+
+### Hardening
+
+- **Windows.** Both windows run with context isolation, the sandbox on and Node integration off, behind a `script-src 'self'` Content Security Policy. Navigation and new windows are blocked everywhere, and the only links the app opens are the providers' fixed usage pages.
+- **IPC.** Each channel answers only the window that uses it, and only that window's top frame. The island drives usage, sign-in and its own size, and the settings window reads and writes settings. Arguments are type- and range-checked. A refused request is logged as `ipc: refused …`.
+- **Starting programs.** `wsl.exe`, `cmd.exe` and `taskkill.exe` start by full path from `%SystemRoot%\System32` (or `%ComSpec%`), never by bare name, so a look-alike exe in the working directory can't run instead. `codex` is resolved against absolute `PATH` entries only. An npm `codex.cmd` runs through `cmd.exe` by its full path, and ends with its whole process tree so nothing is left running between checks.
+- **Electron fuses.** The packaged `AI Usage.exe` has RunAsNode, `NODE_OPTIONS` and the `--inspect` flags turned off, and loads its code only from `app.asar` ([`electron-builder.yml`](electron-builder.yml)). Asar integrity validation stays off until it has been tried on an installed build.
+- **Updates.** Until the installer is code-signed (see [code signing](docs/code-signing.md)), an update is checked only against the SHA-512 in the release's `latest.yml`. Anyone who can publish a release on this repository can therefore ship an update, so publish rights are as sensitive as a signing key.
 
 ## Install
 
@@ -114,13 +122,15 @@ waiting for a wrong number to show up in the island.
 Releases are built by GitHub Actions, not on a developer machine ([`release.yml`](.github/workflows/release.yml)). Bump the version, commit, and push a tag:
 
 ```bash
-npm version 0.1.11 --no-git-tag-version
-git commit -am "chore(release): v0.1.11"
-git tag -a v0.1.11 -m "v0.1.11"
-git push origin main v0.1.11
+npm version 0.1.14 --no-git-tag-version
+git commit -am "chore(release): v0.1.14"
+git tag -a v0.1.14 -m "v0.1.14"
+git push origin main v0.1.14
 ```
 
 The workflow checks that the tag matches `package.json`, runs the typecheck and tests, builds the installer, signs it once SignPath is set up (see [code signing](docs/code-signing.md)), and attaches the installer, its blockmap and `latest.yml` to the release. Installed copies pick it up within six hours, or at their next start.
+
+The release job keeps its secrets narrow. `SIGNPATH_API_TOKEN` is visible only to the step that checks it exists and to the signing step, never to `npm ci`'s install scripts, the tests or the build. Checkout doesn't leave the job's token in `.git/config`. Every action is pinned to a commit SHA with its tag in a comment, so when you bump one, change the SHA and the comment together.
 
 Anything that changes the installer after electron-builder has run must be followed by `scripts/update-signed-metadata.mjs`. electron-updater rejects a download whose hash doesn't match `latest.yml`, so a stale one breaks updates for everyone.
 
@@ -160,6 +170,8 @@ src/
     app.ts         composition root: scheduler, store, alerts, IPC, tray, windows
     island-window.ts, settings-window.ts, tray.ts, notifier.ts
     scheduler.ts, usage-store.ts, alert-engine.ts, system-theme.ts, redact.ts
+    ipc-guard.ts   IPC sender and argument checks
+    system-exe.ts  full paths for Windows system programs; PATH lookup that skips the current directory
     updater.ts     electron-updater wrapper: checks, visible install, restart
     switch-account.ts  opens the CLI's own sign-in for a provider's source
   preload/         typed contextBridge API (window.api)
