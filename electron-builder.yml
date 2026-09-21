@@ -15,6 +15,15 @@ publish:
   provider: github
   owner: Schoolees
   repo: ai-usage
+# Flipped inside the packaged electron.exe. Off, the app's exe cannot double as a general Node
+# interpreter (RunAsNode) or take code through NODE_OPTIONS / --inspect.
+# Asar integrity validation is left off until it has been tried on an installed Windows build: if
+# the embedded hash is missing or wrong, the app refuses to start.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
 win:
   target:
     - target: nsis
