@@ -1,4 +1,4 @@
-import { app, ipcMain, nativeTheme, powerMonitor, screen, shell, systemPreferences } from 'electron';
+import { app, ipcMain, nativeTheme, powerMonitor, screen, shell, systemPreferences, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { IPC, type DisplayOption, type ProviderOption } from '../shared/ipc';
@@ -18,7 +18,8 @@ import { createRunningDistroCache, defaultDetectDeps, distroFromHome, listCandid
 import { loadState, saveState } from './state-file';
 import { UsageStore } from './usage-store';
 import trayIcon from '../../resources/tray.ico?asset';
-import { openSettingsWindow, updateSettingsWindowTheme } from './settings-window';
+import { openSettingsWindow, settingsContents, updateSettingsWindowTheme } from './settings-window';
+import { fromWindow, isOptionalAge, isPixelSize, isPlainObject } from './ipc-guard';
 import { defaultThemeDeps, readSystemTheme } from './system-theme';
 import { createTray } from './tray';
 import { hasLoginCommand, startLogin } from './switch-account';
@@ -207,9 +208,32 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     return settings;
   }
 
+  // Each channel answers only the window that uses it: the island drives usage, sign-in and its own
+  // size; the settings window reads and writes settings. Anything else is dropped (sends) or
+  // rejected (invokes) and logged.
+  const islandPage = () => [island.win.isDestroyed() ? null : island.win.webContents];
+  const settingsPage = () => [settingsContents()];
+  const eitherPage = () => [...islandPage(), ...settingsPage()];
+  type Pages = () => (WebContents | null)[];
+
+  const refuse = (channel: string) => log.warn(`ipc: refused ${channel} from an unexpected sender or with bad arguments`);
+  function on(channel: string, pages: Pages, listener: (...args: unknown[]) => void): void {
+    ipcMain.on(channel, (event: IpcMainEvent, ...args: unknown[]) => {
+      if (fromWindow(event, pages())) listener(...args);
+      else refuse(channel);
+    });
+  }
+  function handle(channel: string, pages: Pages, listener: (...args: unknown[]) => unknown): void {
+    ipcMain.handle(channel, (event: IpcMainInvokeEvent, ...args: unknown[]) => {
+      if (fromWindow(event, pages())) return listener(...args);
+      refuse(channel);
+      throw new Error(`${channel} is not available to this window`);
+    });
+  }
+
   // Registered before the first await (detectAll, below) so the renderer's earliest getView(),
   // resizeIsland and setExpanded calls are never dropped while source detection is in flight.
-  ipcMain.handle(IPC.viewGet, () => view());
+  handle(IPC.viewGet, islandPage, () => view());
   /** The source a provider is being read from right now: the configured one, or the automatic pick. */
   const activeSource = (providerId: string) => pickSource(detected[providerId] ?? [], providerSettings(settings, providerId).sourceHome);
 
@@ -225,18 +249,30 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
     }
   };
 
-  ipcMain.handle(IPC.refresh, (_event, olderThanMs?: number) => scheduler.refreshNow({ olderThanMs }));
-  ipcMain.on(IPC.islandResize, (_event, width: number, height: number) => island.resize(width, height));
-  ipcMain.on(IPC.islandSetExpanded, (_event, expanded: boolean) => island.setExpanded(expanded));
-  ipcMain.on(IPC.islandSetInteractive, (_event, interactive: boolean) => island.setInteractive(interactive === true));
-  ipcMain.on(IPC.openUsagePage, (_event, providerId: string) => {
+  handle(IPC.refresh, islandPage, (olderThanMs) => {
+    if (!isOptionalAge(olderThanMs)) throw new Error('refresh: olderThanMs must be a non-negative number');
+    return scheduler.refreshNow({ olderThanMs });
+  });
+  on(IPC.islandResize, islandPage, (width, height) => {
+    if (isPixelSize(width) && isPixelSize(height)) island.resize(Math.round(width), Math.round(height));
+    else refuse(IPC.islandResize);
+  });
+  on(IPC.islandSetExpanded, islandPage, (expanded) => island.setExpanded(expanded === true));
+  on(IPC.islandSetInteractive, islandPage, (interactive) => island.setInteractive(interactive === true));
+  on(IPC.openUsagePage, islandPage, (providerId) => {
     const url = plugins.find((plugin) => plugin.id === providerId)?.usageUrl;
     if (url) void shell.openExternal(url);
   });
-  ipcMain.on(IPC.switchAccount, (_event, providerId: string) => switchAccount(providerId));
-  ipcMain.handle(IPC.settingsGet, () => settings);
-  ipcMain.handle(IPC.settingsSet, (_event, patch: SettingsPatch) => applySettings(mergeSettings(settings, patch)));
-  ipcMain.handle(IPC.providersGet, async (): Promise<ProviderOption[]> => {
+  on(IPC.switchAccount, islandPage, (providerId) => {
+    if (typeof providerId === 'string') switchAccount(providerId);
+    else refuse(IPC.switchAccount);
+  });
+  handle(IPC.settingsGet, settingsPage, () => settings);
+  handle(IPC.settingsSet, settingsPage, (patch) => {
+    if (!isPlainObject(patch)) throw new Error('settings: patch must be an object');
+    return applySettings(mergeSettings(settings, patch as SettingsPatch));
+  });
+  handle(IPC.providersGet, settingsPage, async (): Promise<ProviderOption[]> => {
     await detectAll();
     return plugins.map((plugin) => ({
       id: plugin.id,
@@ -245,10 +281,10 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
       activeHome: activeSource(plugin.id)?.home ?? null,
     }));
   });
-  ipcMain.handle(IPC.displaysGet, (): DisplayOption[] => listDisplays().map(({ id, label, primary }) => ({ id, label, primary })));
-  ipcMain.handle(IPC.appInfoGet, () => ({ version: app.getVersion() }));
-  ipcMain.handle(IPC.themeGet, () => theme);
-  ipcMain.on(IPC.openSettings, () => openSettingsWindow(theme));
+  handle(IPC.displaysGet, settingsPage, (): DisplayOption[] => listDisplays().map(({ id, label, primary }) => ({ id, label, primary })));
+  handle(IPC.appInfoGet, settingsPage, () => ({ version: app.getVersion() }));
+  handle(IPC.themeGet, eitherPage, () => theme);
+  on(IPC.openSettings, islandPage, () => openSettingsWindow(theme));
 
   const updater = createUpdater({
     log,

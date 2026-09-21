@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, type WebContents } from 'electron';
 import { join } from 'node:path';
 import { IPC } from '../shared/ipc';
 import { windowChrome, type SystemTheme } from '../shared/theme';
@@ -39,6 +39,11 @@ export function openSettingsWindow(theme: SystemTheme): void {
     settingsWindow = null;
   });
   loadRenderer(settingsWindow, 'settings');
+}
+
+/** The settings window's page, while it is open; IPC handlers check requests against it. */
+export function settingsContents(): WebContents | null {
+  return settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow.webContents : null;
 }
 
 function chromeOptions(theme: SystemTheme) {
