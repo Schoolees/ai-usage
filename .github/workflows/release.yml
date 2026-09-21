@@ -18,13 +18,16 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    # At job level so the signing step's own `if` can see whether the secret is set.
-    env:
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+    # Actions are pinned to commit SHAs (tag in the comment) so a moved tag cannot change what runs
+    # in a job that can publish releases.
     steps:
-      - uses: actions/checkout@v4
+      # The job's token can write releases; left in .git/config it would be readable by every
+      # dependency's install script below.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -58,16 +61,25 @@ jobs:
       # SignPath signs a GitHub Actions artifact and hands the signed file back.
       - name: Upload the unsigned installer
         id: unsigned
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: unsigned-installer
           path: dist/${{ steps.installer.outputs.name }}
           if-no-files-found: error
 
+      # A step `if` cannot read secrets directly. This step sees the token only to report whether it
+      # exists, so npm ci, the tests and the build never have it in their environment.
+      - name: Check for the signing token
+        id: signing
+        shell: bash
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: echo "enabled=$([ -n "$SIGNPATH_API_TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
       - name: Sign the installer
         id: sign
-        if: env.SIGNPATH_API_TOKEN != ''
-        uses: signpath/github-action-submit-signing-request@v1
+        if: steps.signing.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@ced31329c0317e779dad2eec2a7c3bb46ea1343e # v1
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
