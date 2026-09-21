@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Source } from '../shared/types';
 import { loginCommand } from './switch-account';
+import { systemExe } from './system-exe';
 
 const wsl: Source = { kind: 'wsl', label: 'WSL · Ubuntu-24.04', home: '\\\\wsl.localhost\\Ubuntu-24.04\\home\\you' };
 const windows: Source = { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you' };
@@ -8,20 +9,20 @@ const windows: Source = { kind: 'windows', label: 'Windows', home: 'C:\\Users\\y
 describe('loginCommand', () => {
   it('runs the CLI in a login shell in the right distro', () => {
     const command = loginCommand('claude', wsl);
-    expect(command?.file).toBe('wsl.exe');
+    expect(command?.file).toBe(systemExe('wsl.exe'));
     expect(command?.args.slice(0, 5)).toEqual(['-d', 'Ubuntu-24.04', '--', 'bash', '-lc']);
     expect(command?.args[5]).toContain('claude auth login');
   });
 
   it('uses each provider\u2019s own sign-in command', () => {
     expect(loginCommand('codex', wsl)?.args[5]).toContain('codex login');
-    expect(loginCommand('codex', windows)).toEqual({ file: 'cmd.exe', args: ['/c', 'codex login || pause'] });
+    expect(loginCommand('codex', windows)).toEqual({ file: systemExe('cmd.exe'), args: ['/c', 'codex login || pause'] });
   });
 
   it('closes the window after a successful sign-in, and keeps it up only when the CLI fails', () => {
     // `a || b` runs b only when a exits non-zero, so success closes the console straight away.
     expect(loginCommand('claude', wsl)?.args[5]).toMatch(/^claude auth login \|\| \{ .*read -rp .*; \}$/);
-    expect(loginCommand('claude', windows)).toEqual({ file: 'cmd.exe', args: ['/c', 'claude auth login || pause'] });
+    expect(loginCommand('claude', windows)).toEqual({ file: systemExe('cmd.exe'), args: ['/c', 'claude auth login || pause'] });
   });
 
   it('passes a distro name as one argument, spaces and all', () => {

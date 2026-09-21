@@ -1,7 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Source } from '../../../shared/types';
 import { distroFromHome } from '../../sources/detect';
+import { systemExe } from '../../system-exe';
 import type { CodexRateLimitRecord, CodexWindow } from './parse';
 
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -41,7 +43,7 @@ function appServerCommand(source: Source): { file: string; args: string[] } | nu
   if (source.kind !== 'wsl') return { file: 'codex', args: ['app-server', '--stdio'] };
   const distro = distroFromHome(source.home);
   if (!distro) return null;
-  return { file: 'wsl.exe', args: ['-d', distro, '--', 'bash', '-lc', 'exec codex app-server --stdio'] };
+  return { file: systemExe('wsl.exe'), args: ['-d', distro, '--', 'bash', '-lc', 'exec codex app-server --stdio'] };
 }
 
 function codexHome(source: Source): string {
@@ -104,6 +106,8 @@ export function readAppServerRateLimits(source: Source, now: number): Promise<Co
     const child = spawn(command.file, command.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+      // `codex` is found through PATH, so start from a known folder rather than wherever the app was launched.
+      cwd: homedir(),
       env: { ...process.env, CODEX_HOME: codexHome(source) },
     });
     const finish = (error?: Error, record?: CodexRateLimitRecord) => {

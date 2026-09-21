@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import type { Source } from '../shared/types';
 import type { initLog } from './log';
 import { distroFromHome } from './sources/detect';
+import { systemExe } from './system-exe';
 
 export interface TerminalCommand {
   file: string;
@@ -42,10 +43,10 @@ export function loginCommand(providerId: string, source: Source): TerminalComman
     const distro = distroFromHome(source.home);
     if (!distro) return null;
     // A login shell, so the CLI is on PATH exactly as it is when the user runs it by hand.
-    return { file: 'wsl.exe', args: ['-d', distro, '--', 'bash', '-lc', `${cli} || ${PAUSE_ON_FAILURE}`] };
+    return { file: systemExe('wsl.exe'), args: ['-d', distro, '--', 'bash', '-lc', `${cli} || ${PAUSE_ON_FAILURE}`] };
   }
   // cmd /c closes when done; `pause` only runs if the sign-in failed.
-  return { file: 'cmd.exe', args: ['/c', `${cli} || pause`] };
+  return { file: systemExe('cmd.exe'), args: ['/c', `${cli} || pause`] };
 }
 
 /**

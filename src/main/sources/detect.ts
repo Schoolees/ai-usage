@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import type { DetectedSource, Source } from '../../shared/types';
+import { systemExe } from '../system-exe';
 
 export const WSL_PROBE_TIMEOUT_MS = 3000;
 
@@ -120,7 +121,7 @@ export function defaultDetectDeps(): DetectDeps {
     listRunningDistros: () =>
       new Promise((resolve, reject) => {
         execFile(
-          'wsl.exe',
+          systemExe('wsl.exe'),
           ['-l', '--running', '-q'],
           { encoding: 'buffer', windowsHide: true, timeout: WSL_PROBE_TIMEOUT_MS, killSignal: 'SIGKILL' },
           (error, stdout) => (error ? reject(error) : resolve(stdout)),
