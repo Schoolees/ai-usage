@@ -1,9 +1,9 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Source } from '../../../shared/types';
 import { distroFromHome } from '../../sources/detect';
-import { systemExe } from '../../system-exe';
+import { findOnPath, systemExe } from '../../system-exe';
 import type { CodexRateLimitRecord, CodexWindow } from './parse';
 
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -39,11 +39,37 @@ interface AppServerResponse {
   rate_limits_by_limit_id?: unknown;
 }
 
-function appServerCommand(source: Source): { file: string; args: string[] } | null {
-  if (source.kind !== 'wsl') return { file: 'codex', args: ['app-server', '--stdio'] };
-  const distro = distroFromHome(source.home);
-  if (!distro) return null;
-  return { file: systemExe('wsl.exe'), args: ['-d', distro, '--', 'bash', '-lc', 'exec codex app-server --stdio'] };
+export interface AppServerCommand {
+  file: string;
+  args: string[];
+  /** Arguments already quoted for cmd.exe, passed through as written. */
+  verbatim?: boolean;
+  /** Started through cmd.exe, so ending it must end the whole process tree, not just the console. */
+  tree?: boolean;
+}
+
+export interface CommandDeps {
+  platform: NodeJS.Platform;
+  findOnPath(name: string): string | null;
+}
+
+const defaultCommandDeps: CommandDeps = { platform: process.platform, findOnPath: (name) => findOnPath(name) };
+
+export function appServerCommand(source: Source, deps: CommandDeps = defaultCommandDeps): AppServerCommand | null {
+  if (source.kind === 'wsl') {
+    const distro = distroFromHome(source.home);
+    if (!distro) return null;
+    return { file: systemExe('wsl.exe'), args: ['-d', distro, '--', 'bash', '-lc', 'exec codex app-server --stdio'] };
+  }
+  if (deps.platform !== 'win32') return { file: 'codex', args: ['app-server', '--stdio'] };
+
+  const codex = deps.findOnPath('codex');
+  if (!codex) return null;
+  if (/\.(exe|com)$/i.test(codex)) return { file: codex, args: ['app-server', '--stdio'] };
+  // An npm install is codex.cmd, which Node refuses to start without a shell. The path goes to cmd
+  // quoted; one that cmd would still reinterpret (a quote, or %VAR% expansion) is not run at all.
+  if (/["%]/.test(codex)) return null;
+  return { file: systemExe('cmd.exe'), args: ['/d', '/s', '/c', `""${codex}" app-server --stdio"`], verbatim: true, tree: true };
 }
 
 function codexHome(source: Source): string {
@@ -90,8 +116,14 @@ function parseLine(line: string): JsonRpcMessage | null {
   }
 }
 
-function stop(child: ChildProcessWithoutNullStreams): void {
-  if (!child.killed) child.kill();
+function stop(child: ChildProcessWithoutNullStreams, tree: boolean): void {
+  if (child.killed || child.exitCode !== null) return;
+  if (tree && child.pid !== undefined) {
+    // Killing cmd.exe alone would leave the shim's node and codex running, one more every fetch.
+    execFile(systemExe('taskkill.exe'), ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }, () => {});
+    return;
+  }
+  child.kill();
 }
 
 /** Read the current account-wide limit snapshot from Codex's authenticated app-server. */
@@ -106,7 +138,9 @@ export function readAppServerRateLimits(source: Source, now: number): Promise<Co
     const child = spawn(command.file, command.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
-      // `codex` is found through PATH, so start from a known folder rather than wherever the app was launched.
+      windowsVerbatimArguments: command.verbatim,
+      // Start from a known folder rather than wherever the app was launched: cmd, and a bare `codex`
+      // off Windows, look in the current directory first.
       cwd: homedir(),
       env: { ...process.env, CODEX_HOME: codexHome(source) },
     });
@@ -114,7 +148,7 @@ export function readAppServerRateLimits(source: Source, now: number): Promise<Co
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      stop(child);
+      stop(child, command.tree === true);
       if (error) reject(error);
       else if (record) resolve(record);
       else reject(new Error('Codex app-server returned no rate limits'));
@@ -141,9 +175,16 @@ export function readAppServerRateLimits(source: Source, now: number): Promise<Co
           }
           continue;
         }
-        if (message.id !== 2) continue;
+        if (message.id !== 2 && message.id !== 3) continue;
         if (message.error) {
-          finish(new Error(typeof message.error.message === 'string' ? message.error.message : 'Codex app-server request failed'));
+          const text = typeof message.error.message === 'string' ? message.error.message : '';
+          // Older Codex (seen with 0.139) takes no params here and rejects ours ("invalid type: map, expected
+          // unit"), so ask once more the way it expects.
+          if (message.id === 2 && /invalid (type|request)|expected unit/i.test(text)) {
+            write({ jsonrpc: '2.0', id: 3, method: 'account/rateLimits/read' });
+            continue;
+          }
+          finish(new Error(text || 'Codex app-server request failed'));
           return;
         }
         const record = parseRateLimitsResponse(message.result, now);

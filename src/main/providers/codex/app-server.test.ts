@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { parseRateLimitsResponse } from './app-server';
+import type { Source } from '../../../shared/types';
+import { systemExe } from '../../system-exe';
+import { appServerCommand, parseRateLimitsResponse } from './app-server';
 
 describe('parseRateLimitsResponse', () => {
   it('parses the current camelCase app-server response', () => {
@@ -48,5 +50,39 @@ describe('parseRateLimitsResponse', () => {
 
   it('rejects a response without usable windows', () => {
     expect(parseRateLimitsResponse({ rateLimits: { primary: null, secondary: null } }, 1_000)).toBeNull();
+  });
+});
+
+describe('appServerCommand', () => {
+  const windows: Source = { kind: 'windows', label: 'Windows', home: 'C:\\Users\\you' };
+  const wsl: Source = { kind: 'wsl', label: 'WSL · Ubuntu', home: '\\\\wsl.localhost\\Ubuntu\\home\\you' };
+  const win = (found: string | null) => ({ platform: 'win32' as const, findOnPath: () => found });
+
+  it('starts a native codex.exe directly', () => {
+    expect(appServerCommand(windows, win('C:\\bin\\codex.exe'))).toEqual({ file: 'C:\\bin\\codex.exe', args: ['app-server', '--stdio'] });
+  });
+
+  it('runs an npm codex.cmd through cmd by its full path, and ends it as a tree', () => {
+    expect(appServerCommand(windows, win('C:\\nvm\\codex.cmd'))).toEqual({
+      file: systemExe('cmd.exe'),
+      args: ['/d', '/s', '/c', '""C:\\nvm\\codex.cmd" app-server --stdio"'],
+      verbatim: true,
+      tree: true,
+    });
+  });
+
+  it('refuses a shim path cmd would reinterpret', () => {
+    expect(appServerCommand(windows, win('C:\\%EVIL%\\codex.cmd'))).toBeNull();
+  });
+
+  it('gives up when codex is not on PATH, so the log reader takes over', () => {
+    expect(appServerCommand(windows, win(null))).toBeNull();
+  });
+
+  it('runs codex inside the distro for a WSL source', () => {
+    expect(appServerCommand(wsl, win(null))).toEqual({
+      file: systemExe('wsl.exe'),
+      args: ['-d', 'Ubuntu', '--', 'bash', '-lc', 'exec codex app-server --stdio'],
+    });
   });
 });
