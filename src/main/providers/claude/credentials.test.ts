@@ -26,4 +26,9 @@ describe('parseClaudeCredentials', () => {
     expect(parseClaudeCredentials('{"mcpOAuth":{}}')).toBeNull();
     expect(parseClaudeCredentials('{"claudeAiOauth":{"accessToken":"t"}}')).toBeNull();
   });
+
+  it('rejects empty or non-finite OAuth credentials', () => {
+    expect(parseClaudeCredentials('{"claudeAiOauth":{"accessToken":"","expiresAt":1}}')).toBeNull();
+    expect(parseClaudeCredentials('{"claudeAiOauth":{"accessToken":"t","expiresAt":null}}')).toBeNull();
+  });
 });

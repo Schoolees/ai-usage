@@ -94,11 +94,24 @@ describe('createClaudePlugin', () => {
     expect(await plugin.fetch(source, now)).toMatchObject({ status: 'error', retryAfterMs: 300_000 });
   });
 
+  it('retries transient Anthropic failures before returning usage', async () => {
+    const httpGet = vi.fn<HttpGet>()
+      .mockResolvedValueOnce(response(503))
+      .mockResolvedValueOnce(response(200, { five_hour: { utilization: 12, resets_at: null } }));
+    const sleep = vi.fn(async () => {});
+    const plugin = createClaudePlugin({ httpGet, sleep, readFile: async () => credentials(now + 60_000) });
+
+    expect(await plugin.fetch(source, now)).toMatchObject({ status: 'ok', limits: [{ usedPercent: 12 }] });
+    expect(httpGet).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(250);
+  });
+
   it('maps network failures and bad bodies to error without leaking the token', async () => {
     const offline = createClaudePlugin({
       httpGet: async () => {
         throw new Error('getaddrinfo ENOTFOUND');
       },
+      sleep: async () => {},
       readFile: async () => credentials(now + 60_000),
     });
     const offlineSnapshot = await offline.fetch(source, now);

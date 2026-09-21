@@ -1,10 +1,12 @@
 import { join } from 'node:path';
+import { stat } from 'node:fs/promises';
 import { DAY, HOUR, MINUTE } from '../../../shared/time';
 import type { DetectedSource, Snapshot, Source } from '../../../shared/types';
 import type { ProviderPlugin } from '../types';
 import { findLatestLogs, readTail, type LogFile } from './find-latest-log';
 import { findIndexedLog } from './session-index';
 import { codexSnapshot, findLastRateLimits, newestTokenCountMs, type CodexRateLimitRecord } from './parse';
+import { readAppServerRateLimits } from './app-server';
 
 function sessionsDir(home: string): string {
   return join(home, '.codex', 'sessions');
@@ -23,8 +25,15 @@ async function candidateLogs(home: string): Promise<LogFile[]> {
   return [indexed, ...scanned.filter((log) => log.path !== indexed.path)];
 }
 
-export function createCodexPlugin(): ProviderPlugin {
-  // Logs only change while Codex runs, so re-parse only when the newest log's path or mtime changes.
+export interface CodexPluginDeps {
+  appServerRead?: (source: Source, now: number) => Promise<CodexRateLimitRecord>;
+}
+
+export function createCodexPlugin(deps: CodexPluginDeps = {}): ProviderPlugin {
+  // Logs only change while Codex runs, so re-parse only when a candidate log's path, mtime, or size
+  // changes. Include every candidate because the newest log may not have usage yet and the parser
+  // may be serving a fallback log. Some filesystems coarsen mtime updates, while Codex appends
+  // usage records immediately.
   let cache: { key: string; record: CodexRateLimitRecord } | null = null;
 
   const notFound = (source: Source, now: number, message: string): Snapshot => ({
@@ -41,6 +50,7 @@ export function createCodexPlugin(): ProviderPlugin {
     name: 'ChatGPT (Codex)',
     shortName: 'Codex',
     usageUrl: 'https://chatgpt.com/codex/settings/usage',
+    // Keep this true because the fallback remains available when app-server is unavailable.
     fromLogs: true,
     staleAfterMs: DAY,
     notFoundMessage: 'No Codex logs found on Windows or running WSL distros',
@@ -50,16 +60,31 @@ export function createCodexPlugin(): ProviderPlugin {
       const found: DetectedSource[] = [];
       for (const candidate of candidates) {
         const [latest] = await findLatestLogs(sessionsDir(candidate.home), undefined, 1);
-        if (latest) found.push({ ...candidate, lastModifiedMs: latest.mtimeMs });
+        if (latest) {
+          found.push({ ...candidate, lastModifiedMs: latest.mtimeMs });
+          continue;
+        }
+        try {
+          found.push({ ...candidate, lastModifiedMs: (await stat(join(candidate.home, '.codex', 'auth.json'))).mtimeMs });
+        } catch {
+          // No Codex logs or authenticated app-server state in this home.
+        }
       }
       return found;
     },
 
     async fetch(source, now) {
+      try {
+        const record = await (deps.appServerRead ?? readAppServerRateLimits)(source, now);
+        return codexSnapshot(record, source, now);
+      } catch {
+        // Older Codex versions, API-key-only setups, and broken app-server launches can still be
+        // served by the log reader below.
+      }
       const logs = await candidateLogs(source.home);
       if (logs.length === 0) return notFound(source, now, `No Codex logs in ${source.label}`);
 
-      const key = `${logs[0].path}|${logs[0].mtimeMs}`;
+      const key = logs.map((log) => `${log.path}|${log.mtimeMs}|${log.size}`).join('|');
       if (cache?.key === key) return codexSnapshot(cache.record, source, now);
 
       for (const log of logs) {

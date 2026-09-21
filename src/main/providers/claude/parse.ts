@@ -55,6 +55,7 @@ function fromLimitsArray(records: unknown[]): Limit[] {
     if (!record || typeof record !== 'object') continue;
     const { kind, percent, resets_at, scope } = record as Record<string, unknown>;
     if (typeof kind !== 'string' || typeof percent !== 'number') continue;
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) continue;
     const base = { usedPercent: percent, resetsAt: parseResetsAt(resets_at) };
     if (kind === 'session') {
       limits.push({ id: 'five_hour', label: limitLabel('five_hour'), ...base });
@@ -77,7 +78,7 @@ function fromWindowKeys(body: Record<string, unknown>): Limit[] {
     if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
     const window = value as Record<string, unknown>;
     // A rate-limit window has both fields; blocks like extra_usage do not.
-    if (typeof window.utilization !== 'number' || !('resets_at' in window)) continue;
+    if (typeof window.utilization !== 'number' || !Number.isFinite(window.utilization) || window.utilization < 0 || window.utilization > 100 || !('resets_at' in window)) continue;
     // Inactive placeholder windows (unused codename limits) report 0% with no reset time.
     if (window.utilization === 0 && window.resets_at === null) continue;
     limits.push({ id: key, label: limitLabel(key), usedPercent: window.utilization, resetsAt: parseResetsAt(window.resets_at) });
@@ -88,6 +89,7 @@ function fromWindowKeys(body: Record<string, unknown>): Limit[] {
 export function parseClaudeUsage(body: unknown): Limit[] {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('Unexpected usage response');
   const record = body as Record<string, unknown>;
-  if (Array.isArray(record.limits) && record.limits.length > 0) return sortLimits(fromLimitsArray(record.limits));
-  return sortLimits(fromWindowKeys(record));
+  const limits = Array.isArray(record.limits) && record.limits.length > 0 ? fromLimitsArray(record.limits) : fromWindowKeys(record);
+  if (limits.length === 0) throw new Error('Unexpected usage response');
+  return sortLimits(limits);
 }

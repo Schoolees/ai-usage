@@ -88,6 +88,10 @@ describe('parseClaudeUsage', () => {
     expect(() => parseClaudeUsage('nope')).toThrow('Unexpected usage response');
   });
 
+  it('throws when the response has no usable limits', () => {
+    expect(() => parseClaudeUsage({ limits: [{ kind: 'session', percent: 101, resets_at: null }] })).toThrow('Unexpected usage response');
+  });
+
   it('parses the captured fixture from the spike', () => {
     const limits = parseClaudeUsage(fixture);
     expect(limits.map((l) => [l.id, l.label])).toEqual([

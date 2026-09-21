@@ -20,7 +20,7 @@ export function parseClaudeCredentials(text: string): ClaudeCredentials | null {
     return null;
   }
   const oauth = (parsed as { claudeAiOauth?: Record<string, unknown> } | null)?.claudeAiOauth;
-  if (!oauth || typeof oauth.accessToken !== 'string' || typeof oauth.expiresAt !== 'number') return null;
+  if (!oauth || typeof oauth.accessToken !== 'string' || oauth.accessToken.trim() === '' || typeof oauth.expiresAt !== 'number' || !Number.isFinite(oauth.expiresAt)) return null;
   return {
     accessToken: oauth.accessToken,
     expiresAt: oauth.expiresAt,

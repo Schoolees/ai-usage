@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -134,6 +134,52 @@ describe('createCodexPlugin', () => {
     // Rewrite the content but restore the same mtime: a cached read must not notice.
     writeRollout('2026/09/15', 'rollout-new.jsonl', 99, 2_000);
     expect((await plugin.fetch(source, now)).limits[0].usedPercent).toBe(42);
+  });
+
+  it('re-parses appended usage when the log mtime does not change', async () => {
+    writeRollout('2026/09/15', 'rollout-new.jsonl', 42, 2_000);
+    const plugin = createCodexPlugin();
+    await plugin.fetch(source, now);
+
+    const path = join(home, '.codex', 'sessions', '2026', '09', '15', 'rollout-new.jsonl');
+    const newer = {
+      timestamp: '2026-09-15T08:03:00.000Z',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        rate_limits: { primary: { used_percent: 57, window_minutes: 10080, resets_at: 1789999200 }, secondary: null, plan_type: 'plus' },
+      },
+    };
+    writeFileSync(path, `${readFileSync(path, 'utf8')}${JSON.stringify(newer)}\n`);
+    utimesSync(path, 2_000, 2_000);
+
+    expect((await plugin.fetch(source, now)).limits[0].usedPercent).toBe(57);
+  });
+
+  it('re-parses a fallback log when the newer log still has no usage', async () => {
+    writeRollout('2026/09/14', 'rollout-old.jsonl', 42, 1_000);
+    const dir = join(home, '.codex', 'sessions', '2026', '09', '15');
+    mkdirSync(dir, { recursive: true });
+    const newestPath = join(dir, 'rollout-new.jsonl');
+    writeFileSync(newestPath, '{"type":"session_meta","payload":{}}\n');
+    utimesSync(newestPath, 2_000, 2_000);
+
+    const plugin = createCodexPlugin();
+    await plugin.fetch(source, now);
+
+    const olderPath = join(home, '.codex', 'sessions', '2026', '09', '14', 'rollout-old.jsonl');
+    const newer = {
+      timestamp: '2026-09-15T08:03:00.000Z',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        rate_limits: { primary: { used_percent: 57, window_minutes: 10080, resets_at: 1789999200 }, secondary: null, plan_type: 'plus' },
+      },
+    };
+    writeFileSync(olderPath, `${readFileSync(olderPath, 'utf8')}${JSON.stringify(newer)}\n`);
+    utimesSync(olderPath, 1_000, 1_000);
+
+    expect((await plugin.fetch(source, now)).limits[0].usedPercent).toBe(57);
   });
 
   it('skips a log that cannot be read', async () => {

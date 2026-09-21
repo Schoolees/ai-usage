@@ -53,9 +53,11 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 | Provider | Source | Refresh |
 |---|---|---|
 | Claude | Access token from Claude Code's login (`<home>/.claude/.credentials.json`), used to call the same usage endpoint Claude Code's `/usage` uses | Every 2 minutes (configurable, minimum 1) |
-| ChatGPT / Codex | `rate_limits` records in Codex CLI session logs (`<home>/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`) | Checked every 30 seconds; the numbers only change when Codex writes a new log |
+| ChatGPT / Codex | Codex's local app-server `account/rateLimits/read` endpoint, with session logs as a fallback (`<home>/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`) | Checked every 30 seconds; app-server reads the current account snapshot directly |
 
 Neither usage source is a documented public API. They can change without notice, and the app shows an error or "stale" state rather than a wrong number when they do.
+
+Claude Pro/Max and Claude.ai Team/Enterprise seats use the Claude Code OAuth login and the subscription usage response. The separate Claude Code Analytics Admin API is organization-level, unavailable for individual accounts, and can lag by up to one hour, so it is reserved for a future organization dashboard rather than used for live personal limits. It requires an organization or analytics credential and is never stored in AI Usage settings.
 
 ### Privacy and credentials
 
