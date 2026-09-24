@@ -28,7 +28,7 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
   <img src="docs/screenshots/panel.png" alt="Expanded panel with Claude 5-hour, weekly and per-model weekly limits, Codex 5-hour and weekly limits, and sign-in and usage-page buttons beside each provider" width="75%">
 </p>
 
-**Settings.** Providers and their sources, island display, alerts, refresh and updates, following the Windows theme, accent color and Mica.
+**Settings.** Providers and their sources, island display, alerts, refresh and updates, following the Windows theme and accent color.
 
 <p align="center">
   <img src="docs/screenshots/settings.png" alt="Settings window with Providers, Island, Alerts, Refresh and Updates in the sidebar, and provider switches and source dropdowns" width="75%">
@@ -42,7 +42,7 @@ It reads the logins and logs that the Claude Code and Codex CLIs already keep on
 - **Claude and Codex.** Claude's 5-hour, weekly, and per-model weekly limits; Codex's 5-hour and weekly limits.
 - **Windows and WSL.** Finds CLI logins and logs in `%USERPROFILE%` and in every *running* WSL distro. It never starts a stopped distro. You can pick the source in Settings.
 - **Alerts.** A Windows notification when a limit crosses your warning (default 80%) or critical (default 95%) threshold, and when a busy window resets. Each alert fires once per window, and every one is written to the log.
-- **Follows Windows personalization.** Dark/light mode, accent color, and Transparency effects (Mica backdrop on the settings window), updated live.
+- **Follows Windows personalization.** Dark/light mode, accent color, and Transparency effects (on the island), updated live.
 - **Stays out of the way.** Clicks pass through everywhere except the pill and open panel. It hides automatically over fullscreen apps, can live on any display, and starts with Windows.
 - **Automatic updates.** New releases download in the background from GitHub. The tray offers **Restart to update** as soon as one is ready, or it installs when you quit. Either way the installer shows its progress, AI Usage reopens by itself, and a notification confirms the new version. Turn it off in Settings → Updates.
 - **Switch accounts.** The sign-in icon next to each provider (or **Switch account** in the tray) opens a console running that CLI's own sign-in — `claude auth login` or `codex login` — in the Windows home or WSL distro the app is reading. Finish the browser flow and the console closes; the island shows the new account within a minute. If the sign-in fails, the console stays open so you can read why. There's no logout step: signing in replaces the current account, and your MCP server logins are left alone.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_THEME, contrastText, parseAccentPalette, parseRegValue, themeVariables, windowChrome, type SystemTheme } from './theme';
+import { DEFAULT_THEME, contrastText, parseAccentPalette, parseRegValue, themeVariables, windowBackground, type SystemTheme } from './theme';
 
 // Real `reg query` output from a Windows 11 machine (dark mode, transparency on, blue-grey accent).
 const personalize = `
@@ -74,22 +74,13 @@ describe('themeVariables', () => {
   });
 });
 
-describe('windowChrome', () => {
-  it('uses the Mica backdrop when transparency is on', () => {
-    expect(windowChrome({ mode: 'dark', transparency: true, accent: null })).toEqual({
-      backgroundMaterial: 'mica',
-      backgroundColor: '#00000000',
-    });
+describe('windowBackground', () => {
+  it('uses solid Windows surface colors', () => {
+    expect(windowBackground({ mode: 'dark', transparency: false, accent: null })).toBe('#202020');
+    expect(windowBackground({ mode: 'light', transparency: false, accent: null })).toBe('#f3f3f3');
   });
 
-  it('uses solid Windows surface colors when transparency is off', () => {
-    expect(windowChrome({ mode: 'dark', transparency: false, accent: null })).toEqual({
-      backgroundMaterial: 'none',
-      backgroundColor: '#202020',
-    });
-    expect(windowChrome({ mode: 'light', transparency: false, accent: null })).toEqual({
-      backgroundMaterial: 'none',
-      backgroundColor: '#f3f3f3',
-    });
+  it('stays solid when transparency effects are on', () => {
+    expect(windowBackground({ mode: 'dark', transparency: true, accent: null })).toBe('#202020');
   });
 });

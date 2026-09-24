@@ -3,7 +3,7 @@
 /* Settings window styled after Windows 11 Settings; follows Windows personalization (theme.ts). */
 :root {
   color-scheme: dark;
-  /* Windows 11 Settings surfaces. Overridden below for light mode and for transparency (Mica backdrop). */
+  /* Windows 11 Settings surfaces. Overridden below for light mode. */
   --bg: #202020;
   --sidebar: #1c1c1c;
   --surface: #2b2b2b;
@@ -24,15 +24,6 @@
   line-height: 1.45;
 }
 
-:root[data-transparency='on'] {
-  --bg: transparent;
-  --sidebar: transparent;
-  --surface: rgb(255 255 255 / 5%);
-  --surface-2: rgb(255 255 255 / 7%);
-  /* In-app acrylic, like Windows 11 dropdown flyouts: translucent over a blur, so the Mica tint shows through. */
-  --popover: rgb(44 44 44 / 72%);
-}
-
 :root[data-theme='light'] {
   color-scheme: light;
   --bg: #f3f3f3;
@@ -48,14 +39,6 @@
   --text-2: #5f5f5f;
   --text-3: #767676;
   --danger-soft: rgb(220 53 69 / 10%);
-}
-
-:root[data-theme='light'][data-transparency='on'] {
-  --bg: transparent;
-  --sidebar: transparent;
-  --surface: rgb(255 255 255 / 70%);
-  --surface-2: rgb(255 255 255 / 85%);
-  --popover: rgb(252 252 252 / 80%);
 }
 
 * { box-sizing: border-box; }

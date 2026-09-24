@@ -69,13 +69,7 @@ export function themeVariables(theme: SystemTheme): Record<'--primary' | '--prim
   return { '--primary': primary, '--primary-hover': hover, '--on-primary': contrastText(primary) };
 }
 
-export interface WindowChrome {
-  backgroundMaterial: 'mica' | 'none';
-  backgroundColor: string;
-}
-
-/** Native window colors for the settings window: Mica when transparency effects are on, Windows' solid surface otherwise. */
-export function windowChrome(theme: SystemTheme): WindowChrome {
-  if (theme.transparency) return { backgroundMaterial: 'mica', backgroundColor: '#00000000' };
-  return { backgroundMaterial: 'none', backgroundColor: theme.mode === 'dark' ? '#202020' : '#f3f3f3' };
+/** Native background color for the settings window: Windows' solid Settings surface. */
+export function windowBackground(theme: SystemTheme): string {
+  return theme.mode === 'dark' ? '#202020' : '#f3f3f3';
 }
