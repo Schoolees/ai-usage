@@ -59,6 +59,9 @@ jobs:
         run: echo "name=ai-usage-setup-$(node -p "require('./package.json').version").exe" >> "$GITHUB_OUTPUT"
 
       # SignPath signs a GitHub Actions artifact and hands the signed file back.
+      # Kept one day, not the default 90: SignPath reads it within minutes, and the Schoolees
+      # org's Free plan shares 500 MB of artifact storage across every repo, which a 90-day
+      # installer per release used up and so blocked other repos' releases.
       - name: Upload the unsigned installer
         id: unsigned
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -66,6 +69,7 @@ jobs:
           name: unsigned-installer
           path: dist/${{ steps.installer.outputs.name }}
           if-no-files-found: error
+          retention-days: 1
 
       # A step `if` cannot read secrets directly. This step sees the token only to report whether it
       # exists, so npm ci, the tests and the build never have it in their environment.
