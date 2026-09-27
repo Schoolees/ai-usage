@@ -6,7 +6,8 @@
   font-size: 12px;
   --warn: var(--warning);
   --critical: var(--danger);
-  --bar: var(--primary);
+  /* The blue of the usage bars in the Claude desktop app (Settings > Usage). */
+  --bar: #2c84db;
   /* Surfaces follow Windows personalization: dark/light mode and transparency effects (see theme.ts). */
   --island-pill: #1c1c1c;
   --island-panel: #272727;

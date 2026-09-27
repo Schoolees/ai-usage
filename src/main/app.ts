@@ -1,4 +1,4 @@
-import { app, ipcMain, nativeTheme, powerMonitor, screen, shell, systemPreferences, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from 'electron';
+import { app, ipcMain, nativeTheme, powerMonitor, screen, shell, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { IPC, type DisplayOption, type ProviderOption } from '../shared/ipc';
@@ -61,7 +61,7 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
   const islandDisplay = () => pickDisplay(listDisplays(), settings.displayId);
   const island = new IslandWindow(islandDisplay);
 
-  // Windows Personalization > Colors (mode, accent, transparency), pushed to both windows on change.
+  // Windows Personalization > Colors (mode, transparency), pushed to both windows on change.
   let theme: SystemTheme = DEFAULT_THEME;
   const themeDeps = defaultThemeDeps(() => nativeTheme.shouldUseDarkColors);
   const refreshTheme = async () => {
@@ -340,7 +340,6 @@ export async function startApp(log: ReturnType<typeof initLog>): Promise<Running
 
   void refreshTheme();
   nativeTheme.on('updated', () => void refreshTheme());
-  systemPreferences.on('accent-color-changed', () => void refreshTheme());
   // Transparency toggles don't always raise an event; re-check occasionally.
   setInterval(() => void refreshTheme(), 30_000);
 
